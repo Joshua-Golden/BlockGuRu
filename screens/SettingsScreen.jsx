@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
-import { View, Text, SrollView, Animated, Image, TouchableOpacity, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
 import { useNavigation } from '@react-navigation/native'
 
 import { NHSColors } from '../constants/theme';
@@ -13,7 +13,7 @@ import { Ionicons,Foundation,Feather } from '@expo/vector-icons';
 const {width, height} = Dimensions.get('window');
 const ios = Platform.OS == 'ios';
 
-const SinglePostScreen = (item) => {
+const SettingsScreen = (item) => {
   const navigation = useNavigation();
   
   return (
@@ -28,16 +28,13 @@ const SinglePostScreen = (item) => {
           <TouchableOpacity className="flex-row justify-center items-center" onPress={() => navigation.goBack()}>
             <Ionicons name='arrow-back' color={NHSColors['nhs-blue']} size={30}/>
           </TouchableOpacity>
-          <Text className="text-xl text-nhs-black ml-3">Single Post Screen</Text>        
+          <Text className="text-xl text-nhs-black ml-3">Settings</Text>        
 
         </View>
       </SafeAreaView>
-      <View className="mt-3 py-3">
-        <Text className="text-2xl text-nhs-black">{item.name}</Text>
-      </View>
     </View>
 
 )
 };
 
-export default SinglePostScreen
+export default SettingsScreen

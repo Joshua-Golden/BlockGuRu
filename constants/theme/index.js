@@ -39,3 +39,15 @@ export const LightThemeColors = {
     brightBlue: NHSColors['nhs-bright-blue'],
     lightBlue: NHSColors['nhs-light-blue']
 }
+
+export const Default = {
+
+}
+
+export const DarkMode = {
+
+}
+
+export const LightMode = {
+
+}
