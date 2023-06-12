@@ -5,17 +5,14 @@ import { createBottomTabNavigator } from '@react-navigation/bottom-tabs';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 
 
-import { LightThemeColors } from '../constants/theme';
+import { LightThemeColors, NHSColors } from '../constants/theme';
 
 // Pages
 import Home from '../app/home';
-import SinglePost from '../app/post/singlePost';
 import Search from '../app/search';
 import Library from '../app/library';
-
-// Screens
-import SinglePostScreen from '../screens/SinglePostScreen';
-import SettingsScreen from '../screens/SettingsScreen';
+import Post from '../app/post';
+import Settings from '../app/settings';
 
 // Icons
 import { Ionicons,Foundation,Feather } from '@expo/vector-icons';
@@ -32,8 +29,8 @@ export default function AppNavigation() {
     return (
         <Stack.Navigator>
             <Stack.Screen name="home" options={{headerShown: false}} component={HomeTabs} />
-            <Stack.Screen name="post/singlePost" options={{headerShown: false}} component={SinglePostScreen} />
-            <Stack.Screen name="settings" options={{headerShown: false}} component={SettingsScreen} />
+            <Stack.Screen name="post" options={{headerShown: false}} component={Post} />
+            <Stack.Screen name="settings" options={{headerShown: false}} component={Settings} />
         </Stack.Navigator>
     )
 } 
@@ -44,11 +41,14 @@ function HomeTabs() {
             headerShown: false,
             tabBarShowLabel: false,
             tabBarIcon: ({ focused }) => menuIcons(route, focused),
+            tabBarIconStyle: {
+                marginTop: ios? 4 : 0,
+            },
             tabBarStyle: {
-                height: ios? 100 : 60,
+                height: ios? 60 : 50,
                 justifyContent:'center',
                 alignItems: 'center',
-                backgroundColor: LightThemeColors.blue
+                backgroundColor: NHSColors['nhs-white']
             },
             })}>
             <Tab.Screen name="hometab" component={Home} />
@@ -60,7 +60,7 @@ function HomeTabs() {
 
 const menuIcons = (route, focused) => {
     let icon;
-    let iconSize = 25;
+    let iconSize = 20;
     let focusedIconSize = 30;
     let focusedButtonClass = "rounded-full flex items-center justify-center p-3 bg-nhs-light-blue";
     let focusedText = "text-md text-nhs-white"
@@ -68,21 +68,18 @@ const menuIcons = (route, focused) => {
     
     if (route.name === 'hometab') {
         label = 'home';
-        icon = focused?<Foundation name='home' size={iconSize} color={LightThemeColors.bgLight} /> : <Foundation name='home' size={iconSize} color="white" />
+        icon = focused?<Foundation name='home' size={iconSize} color={NHSColors['nhs-light-blue']} /> : <Foundation name='home' size={iconSize} color={NHSColors['nhs-mid-grey']} />
     }   else if (route.name === 'searchtab') {
         label = 'search';
-        icon = focused? <Ionicons name='search' size={iconSize} color={LightThemeColors.bgLight}/> : <Ionicons name='search' size={iconSize} color="white" />
+        icon = focused? <Ionicons name='search' size={iconSize} color={NHSColors['nhs-light-blue']}/> : <Ionicons name='search' size={iconSize} color={NHSColors['nhs-mid-grey']} />
     }   else if (route.name === 'librarytab') {
         label = 'search';
-        icon = focused? <Ionicons name='grid' size={iconSize} color={LightThemeColors.bgLight}/> : <Ionicons name='grid' size={iconSize} color="white" />
+        icon = focused? <Ionicons name='grid' size={iconSize} color={NHSColors['nhs-light-blue']}/> : <Ionicons name='grid' size={iconSize} color={NHSColors['nhs-mid-grey']} />
     } 
     
     return (
         <View className="flex-1 justify-center items-center" >
             {icon}
-            <Text className="capitalize text-sm mt-1 text-nhs-white">
-                {label}
-            </Text>
         </View>
     )
-}
+};
