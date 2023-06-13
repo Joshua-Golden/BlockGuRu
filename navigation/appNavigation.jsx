@@ -13,9 +13,11 @@ import Search from '../app/search';
 import Library from '../app/library';
 import Post from '../app/post';
 import Settings from '../app/settings';
+import SearchResults from '../app/searchresults';
 
 // Icons
 import { Ionicons,Foundation,Feather } from '@expo/vector-icons';
+import { TapGestureHandler } from 'react-native-gesture-handler';
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -28,9 +30,10 @@ LogBox.ignoreLogs([
 export default function AppNavigation() {
     return (
         <Stack.Navigator>
-            <Stack.Screen name="home" options={{headerShown: false}} component={HomeTabs} />
-            <Stack.Screen name="post" options={{headerShown: false}} component={Post} />
-            <Stack.Screen name="settings" options={{headerShown: false}} component={Settings} />
+            <Stack.Screen name="home" options={{headerShown: false, title: 'Home'}} component={HomeTabs} />
+            <Stack.Screen name="post" options={{headerShown: false, title: 'Post'}} component={Post} />
+            <Stack.Screen name="searchresults" options={{headerShown: false}} component={SearchResults} />
+            <Stack.Screen name="settings" options={{headerShown: false, title: 'Settings'}} component={Settings} />
         </Stack.Navigator>
     )
 } 
@@ -42,18 +45,18 @@ function HomeTabs() {
             tabBarShowLabel: false,
             tabBarIcon: ({ focused }) => menuIcons(route, focused),
             tabBarIconStyle: {
-                marginTop: ios? 4 : 0,
+                marginTop: ios? 6 : 0,
             },
             tabBarStyle: {
-                height: ios? 60 : 50,
+                height: ios? 70 : 50,
                 justifyContent:'center',
                 alignItems: 'center',
                 backgroundColor: NHSColors['nhs-white']
             },
             })}>
-            <Tab.Screen name="hometab" component={Home} />
-            <Tab.Screen name="searchtab" component={Search} />
-            <Tab.Screen name="librarytab" component={Library} />
+            <Tab.Screen name="hometab" component={Home} options={{title: 'Home'}} />
+            <Tab.Screen name="searchtab" component={Search} options={{title: 'Search'}} />
+            <Tab.Screen name="librarytab" component={Library} options={{title: 'Library'}} />
         </Tab.Navigator>
     )
 }

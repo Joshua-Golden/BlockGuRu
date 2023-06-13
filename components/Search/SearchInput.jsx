@@ -6,24 +6,25 @@ import { useNavigation } from '@react-navigation/native';
 
 import { Ionicons,Foundation,Feather } from '@expo/vector-icons';
 
-const SearchInput = () => {
+const SearchInput = ({  }) => {
     const navigation = useNavigation();
     const [search, setSearch] = useState('');
 
+    const containerStyle = "my-2 flex-row justify-center items-center rounded-sm px-3 bg-nhs-pale-grey"
+    const textInputStyle = "text-lg flex-1 py-2 mb-1 pl-2 text-nhs-dark-grey"
+
     return (
-      <View className="px-3">
-        <View className="flex-row justify-center items-center rounded-sm">
-          <View className="" pointerEvents="none">
-            <Ionicons name="search" size={20}/>
+        <View className={`${containerStyle}`}>
+          <View className="justify-center items-center" pointerEvents="none">
+            <Ionicons name={`search`} size={25}/>
           </View>
           <TextInput
-            className="bg-nhs-pale-grey flex-1 px-4 py-1 "
-            placeholder="Search"
+            className={`${textInputStyle}`}
+            placeholder={`What do you want to watch?`}
             value={search}
             onChangeText={setSearch}
           />
         </View>
-      </View>
     );
   };
 

@@ -2,37 +2,48 @@ import React, { useState, useEffect } from 'react'
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar } from 'expo-status-bar';
 
-import { View, Text, Image, TouchableOpacity, TouchableWithoutFeedback, Dimensions, Platform } from 'react-native';
+import { View, Text, Image, TouchableOpacity, TouchableWithoutFeedback, Dimensions, Platform, Button, ScrollView } from 'react-native';
 import { useNavigation } from '@react-navigation/native'
 
-import { NHSColors } from '../constants/theme';
+import { NHSColors, ios } from '../constants/theme';
 
 // Icons
 import { Ionicons,Foundation,Feather } from '@expo/vector-icons';
+import SearchInput from '../components/Search/SearchInput';
+import PostGrid from '../components/Posts/PostGrid';
+import PostList from '../components/Posts/PostList';
+import Animated from 'react-native-reanimated';
+import { categories, coffeeItems } from '../constants';
+import CategoryGrid from '../components/Categories.jsx/CategoryGrid';
 
-const {width, height} = Dimensions.get('window');
-const ios = Platform.OS == 'ios';
-
-const Library = () => {
+const Library = ({ title, route }) => {
   const navigation = useNavigation();
   
   return (
-    // Top Nav
-    <View className="flex-1 bg-nhs-white">
-      {/* Status Bar */}
-      <StatusBar />
-      
-      {/* Navigation */}
-      <SafeAreaView className="border-b-[1px] border-neutral-200">
-        <View className={`flex-row  mx-7 ${ios ? 'py-4' : 'py-5'}`}>
-          <TouchableOpacity className="flex-row justify-center items-center" onPress={() => navigation.goBack()}>
-            <Ionicons name='arrow-back' color={NHSColors['nhs-blue']} size={30}/>
-          </TouchableOpacity>
-          <Text className="text-xl text-nhs-black ml-3">Library</Text>        
-
+    <View className="flex">
+    {/* Status Bar */}
+    <StatusBar />
+    {/* Navigation */}
+    <SafeAreaView className={`flex bg-nhs-white border-b-[1px] border-neutral-200 + ${ios ? "py-4 -mb-10" : "py-4"}`}>
+        <View className="flex-row mx-5 justify-between items-center">
+            <Text className="font-bold text-2xl text-nhs-black">Library</Text>
+            <TouchableOpacity onPress={() => navigation.navigate('searchresults')}>
+              <Ionicons name="search" size={25}/>
+            </TouchableOpacity>
         </View>
-      </SafeAreaView>
+    </SafeAreaView>
+
+    <View className="bg-nhs-white px-5">
+      <View className="bg-nhs-white mb-2">
+        <Text className="font-bold text-lg text-nhs-black">Browse all</Text>
+      </View>
+    
+      <View className="h-full w-full justify-center mt-3  bg-nhs-white">
+        <CategoryGrid data={categories} />
+      </View>
     </View>
+
+</View>
 
 )
 };

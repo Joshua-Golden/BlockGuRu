@@ -4,7 +4,7 @@ import Animated, {
   interpolate,
   useAnimatedStyle,
 } from 'react-native-reanimated';
-import {NHSColors, sizes} from '../../constants/theme';
+import {NHSColors, sizes} from '../../../constants/theme';
 
 const CustomBackground = ({animatedIndex, style}) => {
   const containerStyle = useAnimatedStyle(() => ({
