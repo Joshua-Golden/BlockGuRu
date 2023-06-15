@@ -5,6 +5,14 @@
       "bundler": "metro"
     },
     "name": "BlockGuRu",
-    "slug": "BlockGuRu"
+    "slug": "BlockGuRu",
+    "extra": {
+      "eas": {
+        "projectId": "a4acfeee-ba42-47ed-afdc-c782039d72c4"
+      }
+    },
+    "android": {
+      "package": "com.joshuagmg.BlockGuRu"
+    }
   }
 }

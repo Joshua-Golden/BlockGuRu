@@ -2,7 +2,7 @@
 // don't worry, you can find this data in the git repo 
 // you can find the git repo link in the description ;)
 
-export const categories = [
+export const coffeeCategories = [
     {
       id: 1,
       title: "Cappuccino",
@@ -73,5 +73,13 @@ export const categories = [
       image: require('../assets/images/test/coffee5.png'),
       desc: 'The taste of coffee can vary depending on factors such as the type of beans, roast level, brewing method, and the addition of any flavors or sweeteners.'  },
     
-  
+      {
+        id: 6,
+        name: 'Idk',
+        price: '23.10',
+        volume: '120 ml',
+        stars: '4.7',
+        image: require('../assets/images/test/coffee5.png'),
+        desc: 'The taste of coffee can vary depending on factors such as the type of beans, roast level, brewing method, and the addition of any flavors or sweeteners.'  },
+      
   ]

@@ -1,8 +1,14 @@
-// metro.config.js
+// Learn more https://docs.expo.io/guides/customizing-metro
+const { getDefaultConfig } = require('expo/metro-config');
 
-module.exports = {
-    resolver: {
-        sourceExts: ['js', 'jsx', 'json', 'ts', 'tsx', 'cjs'],
-        assetExts: ['glb', 'gltf', 'mtl', 'obj', 'png', 'jpg', 'fbx', 'ttf'],
-    },
-};
+const config = getDefaultConfig(__dirname)
+
+config.resolver.assetExts.push(
+    'js', 'jsx', 'json', 'ts', 'tsx', 'cjs'
+)
+
+config.resolver.sourceExts.push(
+    'glb', 'gltf', 'mtl', 'obj', 'png', 'jpg', 'fbx', 'ttf', 'cjs'
+)
+
+module.exports = config;

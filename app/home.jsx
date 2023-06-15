@@ -13,7 +13,7 @@ import { NHSColors, sizes, spacing, ios } from '../constants/theme';
 // Icons
 import { Ionicons,Foundation,Feather } from '@expo/vector-icons';
 import { ScrollView } from 'react-native-gesture-handler';
-import BottomScreen from '../components/BottomScreen/BottomScreen';
+import BottomScreen from '../components/Home/BottomScreen/BottomScreen';
 
 // // 3D
 import { Canvas } from '@react-three/fiber';
@@ -31,9 +31,9 @@ const Home = () => {
             <SafeAreaView className={`flex bg-nhs-white border-b-[1px] border-neutral-200 + ${ios ? "py-4 -mb-6" : "py-4"}`}>
                 <View className="flex-row justify-between items-center mx-5">
                     <View className="p-4" />
-                    <Text className="font-bold text-lg text-nhs-black">Block GuRu</Text>
+                    <Text className="font-bold text-2xl text-nhs-black">Block GuRu</Text>
                     <TouchableOpacity className="flex-row justify-center items-center" onPress={() => navigation.navigate('settings')}>
-                        <Ionicons name='settings' color={NHSColors['nhs-blue']} size={20}/>
+                        <Ionicons name='settings' color={NHSColors['nhs-black']} size={25}/>
                      </TouchableOpacity>
                 </View>
             </SafeAreaView>
