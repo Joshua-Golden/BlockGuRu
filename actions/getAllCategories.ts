@@ -5,7 +5,7 @@ import { Categories } from "../types";
 
 const getAllCategories = async (): Promise<Categories[]> => {
     const { data:Categories, error } = await supabase
-        .from('Categories')
+        .from('Category')
         .select('*')
     
     if (error) {

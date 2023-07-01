@@ -9,7 +9,7 @@ const getCategoryByID = async (id:number): Promise<Categories[]> => {
         return allVideos;
     }
     const { data:PostContent, error } = await supabase
-        .from('Categories')
+        .from('Category')
         .select()
         .eq('id', `${id}`)
         .single()

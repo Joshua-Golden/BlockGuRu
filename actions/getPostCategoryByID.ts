@@ -1,19 +1,18 @@
 import { supabase } from "../lib/supabase";
-import { Post } from "../types";
-import getVideos from "./getVideos";
+import { PostCategory } from "../types";
+import getAllPosts from "./getAllPosts";
 
+const getPostCategoryByID = async (category_id:number[]): Promise<PostCategory[]>=> {
+    const { data:PostCategories, error } = await supabase
+    .from('PostCategories')
+    .select(`category_id, post_id, Post(*), Category(*) `)
+    .eq('category_id', category_id)
 
-const getPostCategoryByID = async (category_id:number): Promise<Post[]> => {
-    console.log(category_id)
-    const { data:PostCategory, error } = await supabase
-        .from('PostCategories')
-        .select(`category_id, video_id, Post(*) `)
-        .eq('category_id', `${category_id}`)
-    
     if (error) {
         console.log(error.message);
     }
-    return ( PostCategory as any ) || [];
+    
+    return ( PostCategories as any ) || [];
 };
 
 export default getPostCategoryByID;
