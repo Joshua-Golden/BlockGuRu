@@ -2,9 +2,8 @@ import { supabase } from "../lib/supabase";
 import { Categories } from "../types";
 
 const getPostByCategory = async (id:number): Promise<Categories[]> => {
-    console.log(id)
     const { data:Post, error } = await supabase
-        .from('Categories')
+        .from('Category')
         .select()
         .eq('id', `${id}`)
     

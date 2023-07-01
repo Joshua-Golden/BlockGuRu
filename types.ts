@@ -10,12 +10,19 @@ export interface Post {
     postcontentid: BigInt,
 }
 export interface Categories {
-    id: BigInt,
-    title: string,
-    region: string
+    id: BigInt[],
+    title: string[],
+    region: string[]
 }
-export interface PostCategories {
-    id: BigInt,
-    video_id: BigInt,
-    category_id: BigInt
+export interface PostCategory {
+    id: number[],
+    post_id: number[],
+    category_id: number[],
+}
+
+export interface Posts {
+    source: string[],
+    select: string[],
+    eq: string[],
+    order: string[],    
 }
