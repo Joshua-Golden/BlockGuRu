@@ -1,8 +1,5 @@
 import React, {useState, useEffect, ReactElement} from 'react'
 
-import getAllContent from '../actions/getAllContent';
-import getAllPosts from '../actions/getAllPosts';
-
 const useFetch = ( query, params ) => {
     const [ data, setData ] = useState([]);
     const [isLoading, setIsLoading] = useState(false);
