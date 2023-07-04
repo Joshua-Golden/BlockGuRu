@@ -13,6 +13,7 @@ export default function SearchCard({ data, index }) {
     return (
       <>
         <TouchableOpacity
+            className=""
             onPress={() => navigation.navigate('post' , { post: data })}>
             <View className="flex-row justify-start gap-3 items-center my-1">
                 <View className="flex-row rounded-lg overflow-hidden">
@@ -26,7 +27,7 @@ export default function SearchCard({ data, index }) {
                     />
                     <View className="absolute bg-black opacity-50 h-full w-full"/>
                 </View>
-                <View className={`flex-row w-[50%] `}>
+                <View className={`flex-row w-[180] `}>
                     <Text style={styles.title}>{data.title}</Text>
                 </View>
             </View>

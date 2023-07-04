@@ -76,13 +76,13 @@ const menuIcons = (route, focused) => {
     let text = "text-md text-lightGray"
     
     if (route.name === 'hometab') { 
-        label = focused ? <Text className={focusedText}>Home</Text> : <Text className={text}>Home</Text>
+        label = focused ? <Text className={` ${focusedText} w-full`}>Home</Text> : <Text className={` ${text} w-full`}>Home</Text>
         icon = focused ? <Foundation name='home' size={iconSize} color={focusedColor}/> : <Foundation name='home' size={iconSize} color={color} />
     }   else if (route.name === 'searchtab') {
-        label = focused ? <Text className={focusedText}>Search</Text> : <Text className={text}>Search</Text>
+        label = focused ? <Text className={` ${focusedText} w-full`}>Search</Text> : <Text className={` ${text} w-full`}>Search</Text>
         icon = focused ? <Ionicons name='search' size={iconSize} color={focusedColor} /> : <Ionicons name='search' size={iconSize}  color={color}/>
     }   else if (route.name === 'librarytab') {
-        label = focused ? <Text className={focusedText}>Library</Text> : <Text className={text}>Library</Text>
+        label = focused ? <Text className={` ${focusedText} w-full`}>Library</Text> : <Text className={` ${text} w-full`}>Library</Text>
         icon = focused ? <Ionicons name='grid' size={iconSize} color={focusedColor}/> : <Ionicons name='grid' size={iconSize} color={color}/>
     } 
     

@@ -8,6 +8,7 @@ import Header from '../../components/shared/Header';
 import SearchCard from '../../components/shared/Search/SearchCard';
 import useFetch from '../../../hooks/useFetch';
 import getAllCategories from '../../../actions/getAllCategories';
+import { ios, width } from '../../../constants/theme';
 
 export default function Search() {
   const { data: posts, isLoading: isPostsLoading, error: postError, refetch: postsRefetch } = useFetch(getAllPosts, '*')
@@ -35,7 +36,7 @@ export default function Search() {
     <SafeAreaView className="w-full h-full bg-nhs-white">
       <ScrollView className="h-full">
       <View className="mx-5 items-center h-full">
-        <View className="w-full mb-5">
+        <View className={`w-full h-[150px] ${!ios ? `top-10` : ``}`}>
           <Input icon='search' placeholder='What do you want to watch?' autoCorrect={false} value={searchQuery} onChangeText={(query) => handleSearch(query)}/>
         </View>
         <View className="flex-col h-full justify-center items-start left-0">
@@ -68,7 +69,7 @@ export default function Search() {
                 keyExtractor={(item) => item.id}
                 renderItem={({item, index}) => (
                   <>
-                    <SearchCard data={item} index={index} />
+                    <SearchCard data={item} index={index} />  
                   </>
                 )}
                 List

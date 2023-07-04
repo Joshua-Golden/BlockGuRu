@@ -13,7 +13,7 @@ interface InputProps {
 
 export default function Input( { icon, placeholder, onChangeTextValue, onChangeText, autoCorrect, value}: InputProps ) {
   return (
-    <View className={`my-2 flex-row justify-center items-center rounded-md px-3 bg-nhs-pale-grey group focus:border-2 focus:border-nhs-light-green`}>      
+    <View className={`my-2 flex-row justify-center items-center rounded-md px-3 bg-nhs-pale-grey group border-2 border-nhs-pale-grey focus:border-nhs-light-green`}>      
         <View className="justify-center items-center">
             <Ionicons name={icon} size={20} color={`group-focus:nhs-light-green`}/>
         </View>
