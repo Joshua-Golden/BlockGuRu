@@ -4,9 +4,9 @@ import useFetch from '../../../hooks/useFetch';
 import { Image } from 'expo-image';
 
 // API
-import getAllPosts from '../../../actions/getAllPosts';
-import getAllCategories from '../../../actions/getAllCategories';
-import getPostCategoryByID from '../../../actions/getPostCategoryByID';
+import getAllPosts from '../../../actions/database/getAllPosts';
+import getAllCategories from '../../../actions/database/getAllCategories';
+import getPostCategoryByID from '../../../actions/database/getPostCategoryByID';
 
 // Components
 import HeroPost from '../../components/shared/Posts/HeroPost';
@@ -61,7 +61,7 @@ export default function Home({ navigation }) {
               </View>
               ) : postError ? (
                 <Text>Something went wrong</Text>
-              ) : typeof posts !== "undefined" && posts !== null && posts.length !== null && posts.length > 0 ? (
+              ) : typeof posts !== undefined && posts !== null && posts.length !== null && posts.length > 0 ? (
                 <>
                   <HeroPost postData={{ posts, isPostsLoading, postError, postsRefetch }} />
                 </>
@@ -81,7 +81,7 @@ export default function Home({ navigation }) {
                 </View>
               ) : postError ? (
                 <Text>Something went wrong</Text>
-              ) : typeof posts !== "undefined" && posts !== null && posts.length !== null && posts.length > 0 ? (
+              ) : typeof posts !== undefined && posts !== null && posts.length !== null && posts.length > 0 ? (
                 <>
                   <SectionHeader title='Featured Posts' buttonTitle='View All' onPress={() => {}} isButton={true}/>
                   <FeaturedPosts postData={{ posts, isPostsLoading, postError, postsRefetch }} />
@@ -100,7 +100,7 @@ export default function Home({ navigation }) {
                 </View>
               ) : postError ? (
                 <Text>Something went wrong</Text>
-              ) : typeof posts !== "undefined" && posts !== null && posts.length !== null && posts.length > 0 ? (
+              ) : typeof posts !== undefined && posts !== null && posts.length !== null && posts.length > 0 ? (
                 <>
                   <SectionHeader title='Newest Releases' buttonTitle='View All' onPress={() => {}} isButton={true}/>
                   <NewReleases postData={{ posts, isPostsLoading, postError, postsRefetch }} />
@@ -120,7 +120,7 @@ export default function Home({ navigation }) {
               </View>
             ) : categoriesError && postCategoriesError ? (
               <Text>Something went wrong</Text>
-            ) : typeof categories !== 'undefined' && categories !== null && categories.length !== null && categories.length > 0 ? (
+            ) : typeof categories !== undefined && categories !== null && categories.length !== null && categories.length > 0 ? (
               <>
                 <CategoryList categoryData={{ categories, isCategoriesLoading, categoriesError, categoriesRefetch }} postData={{ postCategories, isPostCategoriesLoading, postCategoriesError, postCategoriesRefetch }}/>
               </>

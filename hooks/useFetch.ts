@@ -1,41 +1,41 @@
-import React, {useState, useEffect, ReactElement} from 'react'
+import {useState, useEffect} from 'react'
 
 const useFetch = ( query, params ) => {
     const [ data, setData ] = useState([]);
-    const [isLoading, setIsLoading] = useState(false);
-    const [error, setError] = useState(null);
+    const [ isLoading, setIsLoading ] = useState(false);
+    const [ error, setError ] = useState(null);
 
     const fetchData = async () => {
-        setIsLoading(true);
+      setIsLoading(true);
 
-        if ( Array.isArray(params) ) {
-          const response = new Array
-          params.map(async param => {
-            response.push(await query(param))
-            
-            try {
-              setData(response);
-              setIsLoading(false)
-            } catch (error) {
-              setError(error);
-              console.log(error)
-            } finally {
-              setIsLoading(false);
-            }
-          })
-        } else {
-          const response = await query(params)
-
+      if ( Array.isArray(params) ) {
+        const response = new Array
+        params.map(async param => {
+          response.push(await query(param))
+          
           try {
             setData(response);
             setIsLoading(false)
-          } catch (error) {
+          } catch (error) { 
             setError(error);
             console.log(error)
           } finally {
             setIsLoading(false);
           }
+        })
+      } else {
+        const response = await query(params)
+
+        try {
+          setData(response);
+          setIsLoading(false)
+        } catch (error) {
+          setError(error);
+          console.log(error)
+        } finally {
+          setIsLoading(false);
         }
+      }
         
     };
     

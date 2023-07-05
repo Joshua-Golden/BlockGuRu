@@ -26,3 +26,17 @@ export interface Posts {
     eq: string[],
     order: string[],    
 }
+
+export interface SavedVideos {
+    key: string,
+    title: string,
+    uri: string,
+    id: string,
+}
+
+export interface Cryptography {
+    password: string,
+    salt: string,
+    cost: number,
+    length: number,
+}

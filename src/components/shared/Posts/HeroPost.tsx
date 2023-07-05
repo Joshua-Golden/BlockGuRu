@@ -10,7 +10,6 @@ export default function HeroPost( { postData } ) {
 
   const { posts, isPostsLoading, postError, postsRefetch } = postData
   const post = posts[0]
-  console.log(post)
   return (
     <View className="flex-1 w-full h-full bg-nhs-pale-grey">
       <View className="flex-1 bg-black">

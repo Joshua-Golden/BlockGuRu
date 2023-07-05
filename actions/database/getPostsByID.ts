@@ -1,5 +1,5 @@
-import { supabase } from "../lib/supabase";
-import { Post } from "../types";
+import { supabase } from "../../lib/supabase";
+import { Post } from "../../types";
 import getAllPosts from "./getAllPosts";
 
 

@@ -1,5 +1,5 @@
-import { supabase } from "../lib/supabase";
-import { Categories } from "../types";
+import { supabase } from "../../lib/supabase";
+import { Categories } from "../../types";
 import getAllCategories from "./getAllCategories";
 
 

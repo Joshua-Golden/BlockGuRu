@@ -1,13 +1,13 @@
 import { View, Text, SafeAreaView, FlatList, ScrollView } from 'react-native'
 import React, { useEffect, useState } from 'react'
 import Input from '../../components/shared/Input'
-import getAllPosts from '../../../actions/getAllPosts';
+import getAllPosts from '../../../actions/database/getAllPosts';
 
 import filter from 'lodash.filter'
 import Header from '../../components/shared/Header';
 import SearchCard from '../../components/shared/Search/SearchCard';
 import useFetch from '../../../hooks/useFetch';
-import getAllCategories from '../../../actions/getAllCategories';
+import getAllCategories from '../../../actions/database/getAllCategories';
 import { ios, width } from '../../../constants/theme';
 
 export default function Search() {

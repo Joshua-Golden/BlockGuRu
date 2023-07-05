@@ -9,7 +9,7 @@ const CARD_WIDTH = sizes.width - 80;
 const CARD_HEIGHT = 200;
 const CARD_WIDTH_SPACING = CARD_WIDTH + spacing.l;
 
-export default function NewReleases({ navigation, postData }) {
+export default function NewReleases({ postData }) {
   
   const { posts, isPostsLoading, postError, postsRefetch } = postData
 

@@ -1,5 +1,5 @@
-import { supabase } from "../lib/supabase";
-import { PostCategory } from "../types";
+import { supabase } from "../../lib/supabase";
+import { PostCategory } from "../../types";
 import getAllPosts from "./getAllPosts";
 
 const getPostCategoryByID = async (category_id:number[]): Promise<PostCategory[]>=> {

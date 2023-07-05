@@ -1,28 +1,34 @@
 import { View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, StyleSheet, Pressable, Animated, FlatList } from 'react-native'
 import React, { useEffect, useRef, useState } from 'react'
 import { Image } from 'expo-image'
+import { Video } from 'expo-av';
 
-import * as FileSystem from 'expo-file-system';
-import * as SecureStore from 'expo-secure-store';
 import CircularProgress from 'react-native-circular-progress-indicator';
-import { Modal, SlideAnimation, ModalContent } from'react-native-modals';
+import { BottomModal, SlideAnimation, ModalContent, ModalFooter, ModalButton } from'react-native-modals';
+import * as Progress from 'react-native-progress'
 
 // API
-import getPostCategoryByVidID from '../../../actions/getPostCategoryByVidID';
-import getPostContentByID from '../../../actions/getPostContentByID';
+import getPostCategoryByVidID from '../../../actions/database/getPostCategoryByVidID';
+import getPostContentByID from '../../../actions/database/getPostContentByID';
 
 import useFetch from '../../../hooks/useFetch';
 
 // Icons
 import { Ionicons } from '@expo/vector-icons';
-import { colors, customStyle, sizes, spacing, width, height } from '../../../constants/theme';
+import { colors, customStyle, sizes, spacing, width, height, ios } from '../../../constants/theme';
 import CategoryScroll from '../../components/shared/Categories/CategoryScroll';
 import { SmallButton } from '../../components/shared/Button';
 
 import PostContent from '../../components/shared/Posts/PostContent';
-import Video from '../Video/Video';
-import AsyncStorage from '@react-native-async-storage/async-storage';
-
+// import Video from '../Video/Video';
+import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system';
+import saveVideos from '../../../actions/save/saveVideos';
+import getSavedVideos from '../../../actions/save/getSavedVideos';
+import deleteSavedVideoByTitle from '../../../actions/save/deleteSavedVideoByTitle';
+import getSavedVideoByTitle from '../../../actions/save/getSavedVideoByTitle';
+import deleteSavedVideos from '../../../actions/save/deleteSavedVideos';
+import { Triangle } from 'three';
 
 export default function SinglePost( {route, navigation} ) {
     // Tabs Flat List functions
@@ -44,10 +50,44 @@ export default function SinglePost( {route, navigation} ) {
     }
 
     // API functions
-    const { post } = route.params
+    const { post } = route.params 
     const { data: postContent, isLoading: isPostContentLoading, error: postContentError, refetch: postContentRefetch } = useFetch(getPostContentByID, post.post_content_id)
     const { data: postCategories, isLoading: isPostCategoriesLoading, error: postCategoriesError, refetch: postCategoriesRefetch } = useFetch(getPostCategoryByVidID, post.id)
     
+    const [ useLocalFile, setUseLocalFile ] = useState(false)
+    const [ oldVideoPath, setOldVideoPath ] = useState(post.video_path)
+    const [ pausedDownload, setPausedDownload ] = useState({})
+    
+    useEffect(() => {
+        async function getSavedPost() {
+            // previously paused download
+            const title = post.title.split(" ").join("-").toLowerCase()
+            const downloadSnapshotJson = await SecureStore.getItemAsync(title);
+            const downloadSnapshot = JSON.parse(downloadSnapshotJson);
+            if (downloadSnapshot !== null) {
+                setPausedDownload(downloadSnapshot)
+                setAction('Pause')
+            }
+
+            if (post.video_path === undefined || post.video_path === null ) {
+                setAction('Cannot download')
+                console.log('No video path found.')
+            } else {
+                const result = await getSavedVideoByTitle('posts', post.title)
+                if ( result.length > 0 && typeof result !== undefined && result !== null ) {
+                    
+                        setOldVideoPath(post.video_path)
+                        post.video_path = result[0].uri
+                        setUseLocalFile(true)
+                        setAction('Complete')
+                    }
+            }
+        }
+        getSavedPost()
+    }, [])
+    
+    const video = React.useRef(null)
+
     // Set values for tabs
     const tabs = ['Anatomy', 'Procedures', 'Tips'];
     const tabContent = [postContent.anatomy, postContent.procedures, postContent.tips]
@@ -62,21 +102,16 @@ export default function SinglePost( {route, navigation} ) {
     const options = {
         'Download': ['Pause', 'Cancel'],
         'Pause': ['Resume', 'Cancel'],
-        'Resume': ['Pause', 'Cancel'],
-        'Complete': ['Remove']
+        'Resume': ['Pause', 'Cancel']
     }
-    const [ action, setAction ] = useState('')
 
     // Video Download handler
-    const [ download, setDownload ] = useState('');
-    const [ isDownloading, setIsDownloading ] = useState(false);
-    const [ isSaving, setIsSaving ] = useState(false);
+    const [ action, setAction ] = useState('Can download')
     const [ progress, setProgress ] = useState(0);
-    const [ isPaused, setIsPaused ] = useState(false);
-    const [ isCanceled, setIsCanceled ] = useState(false);
-    const [ isComplete, setIsComplete ] = useState(false);
+    const [ videoSize, setVideoSize ] = useState(0);
     const [ error, setError ] = useState('');
 
+    
     // create private id number for video download
     const video_id = Math.random().toString().slice(2,10);
     const videoDir = FileSystem.documentDirectory + 'videos/';
@@ -92,6 +127,7 @@ export default function SinglePost( {route, navigation} ) {
     const callback = downloadProgress => {
         const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
         setProgress(progress);
+        setVideoSize(downloadProgress.totalBytesExpectedToWrite);
     };
     const downloadResumable = useRef(FileSystem.createDownloadResumable(
         videoURL,
@@ -101,119 +137,126 @@ export default function SinglePost( {route, navigation} ) {
     ));
 
     function handleDownload( action, post ) { 
+        console.log(action)
         setModalVisible(false)
         setAction(action)
-        console.log(action)
-                
-        const savePost = async (uri, post, video_id) => {
-            console.log(uri)
-            const data = {'title': post.title, 'uri': uri, 'id': video_id}
+
+        const savePost = async (uri, params, video_id) => {
             try {
-                setIsSaving(true)
-                console.log('saving post')
-                await SecureStore.setItemAsync(`posts`, JSON.stringify(data))
-                console.log('Saved post to secure store')
-                setIsComplete(true);
+                await saveVideos('posts', video_id, params.title, uri)
+                setAction('Complete')
+                const result = await getSavedVideoByTitle('posts', params.title)
+                
+                if ( result.length > 0 && typeof result !== "undefined" && result !== null) {
+                    post.video_path = result.uri
+                    setUseLocalFile(true)
+                    setAction('Complete')
+                }
             } catch (error) {
                 setError(error)
+                console.error('Video could not save')
                 console.error(error.message);
-            } finally {
-                setIsSaving(false)
             }
         }
-        const downloadVideo = async ( videoURL, params ) => {
-            try{
-                setIsDownloading(true)
-                setIsCanceled(false)
-                await ensureDirExists( videoDir );
-                const { uri } = await downloadResumable.current.downloadAsync();
-                console.log("Download complete: ", params.id)
-                console.log(uri)
-                setDownload(uri)
-                savePost(uri, params, video_id)
-                setIsComplete(true)
-                setAction('Complete')
-            } catch(error) {
-                setError(error)
-                console.error(error.message)
-            } finally {
-                setIsDownloading(false)
-            }
-        }
-        const pauseDownload = async ( videoURL, params ) => {
+        const removeDownload = async ( params ) => {
             try {
-                setIsPaused(false)
+                await deleteSavedVideoByTitle('posts', params.title)
+                setAction('Deleted')
+                setUseLocalFile(false)
+                post.video_path = oldVideoPath
+                const title = params.title.split(" ").join("-").toLowerCase()
+                const result = await SecureStore.getItemAsync(JSON.stringify(title))
+                await SecureStore.deleteItemAsync(title)
+                console.log(result)
+            } catch(error) {
+                console.error(error.message)
+            }
+        }
+        const downloadVideo = async ( params ) => {
+            console.log(params.video_path)
+            if ( params.video_path === undefined || params.video_path === null || params === null ) {
+                console.log('Cannot find file path to download.')
+            } else if ( params.video_path.startsWith('file://')) {
+                setModalVisible(true)
+                setUseLocalFile(true)
+                console.log('Local download found.')
+            } else {
+                try{
+                    await ensureDirExists( videoDir );
+                    const { uri } = await downloadResumable.current.downloadAsync();
+                    console.log("Download complete: ", params.id)
+                    savePost(uri, params, video_id)
+                } catch(error) {
+                    setError(error)
+                    console.error(error.message)
+                }
+            }
+        }
+        const pauseDownload = async ( params ) => {
+            try {
                 const { resumeData } = await downloadResumable.current.pauseAsync();
                 console.log("Download paused: ", params.id)
-                await AsyncStorage.setItem('pausedDownload', JSON.stringify(downloadResumable.current.savable()));
-                setDownload('pausedDownload')  
+                const title = params.title.split(" ").join("-").toLowerCase()
+                await SecureStore.setItemAsync(JSON.stringify(title), JSON.stringify(downloadResumable.current.savable()));
+                console.log(downloadResumable.current.savable())
                 console.log(resumeData)
             } catch (error) {
                 setError(error)
                 console.error(error.message)
-            } finally {
-                setIsPaused(true)
             }
         }
-        const resumeDownload = async ( videoURL, params ) => {
+        const resumeDownload = async ( params ) => {
             try {
-                setIsDownloading(true)
-                setIsPaused(false)
-                const { uri } = await downloadResumable.current.resumeAsync();
-                setDownload(uri)  
-                savePost(uri, params, video_id)
                 console.log("Download resuming: ", params.id)
+
+                const downloadResumable = new FileSystem.DownloadResumable(
+                    pausedDownload.url,
+                    pausedDownload.fileUri,
+                    pausedDownload.options,
+                    callback,
+                    pausedDownload.resumeData
+                );
+                const { uri } = await downloadResumable.resumeAsync();
+                savePost(uri, params, video_id)
             } catch (error) {
                 setError(error)
                 console.error(error.message)
-            } finally {
-                setIsComplete(true)
-                setIsDownloading(false)
             }
         }
-        const cancelDownload = async ( videoURL, params ) => {
+        const cancelDownload = async ( params ) => {
             try {
                 const { resumeData } = await downloadResumable.current.pauseAsync();
                 console.log("Canceling download: ", params.id)
-                setIsCanceled(true)
             } catch (error) {
                 setError(error)
                 console.error(error.message)
             } finally {
-                setAction('Complete')
+                setAction('Download')
             }
         }
         if ( post !== 'null' && post !== 'undefined') {
             if (action === 'Pause') { 
-                console.log(isPaused)
-                if (!isPaused) {
-                    pauseDownload(videoURL, post)
-                } else {
-                    console.log('Already paused')
-                }
+                pauseDownload(post)
             } else if (action ==='Resume') {
-                console.log(action)
-                if (isPaused) {
-                    resumeDownload(videoURL, post)
-                } else {
-                    console.log('Already resumed')
-                }
+                resumeDownload(post)
             } else if (action === 'Download') {
-                console.log(action)
-                if (!isDownloading) {
-                    downloadVideo(videoURL, post)
-                } else {
-                    console.log('Already downloading')
-                }
+                setModalVisible(true)
+                downloadVideo(post)
             } else if (action === 'Cancel') {
-                console.log(action)
-                if (isDownloading) {
-                    cancelDownload(videoURL, post)
-                } else {
-                    console.log('No download to cancel')
-                }
+                cancelDownload(post)
+            } else if (action === 'Remove') {
+                removeDownload(post)
             }
         }
+    }
+
+    async function deleteSavedVideo() {
+        const results = await deleteSavedVideoByTitle('posts', 'text')
+        console.log(results)
+    }
+    async function deleteSavedVideose() {
+        const results = await deleteSavedVideos('posts')
+        console.log(results)
     }
 
     return (
@@ -244,13 +287,22 @@ export default function SinglePost( {route, navigation} ) {
 
                             {isVideoLoading ? (
                                 <>
-                                    <Video post={post} />
+                                    <Video 
+                                        ref={video}
+                                        style={{ width: width, aspectRatio: 16/9}}
+                                        isLooping
+                                        shouldPlay
+                                        useNativeControls
+                                        source={{uri: post.video_path}}
+                                    />
+                                    {/* <Video post={post} /> */}
                                 </>
                             ) : (
                                 <View className="flex-1">
                                     <View className="w-full h-[350px] justify-center items-center">
                                         <View className="flex-1 w-full h-full bg-nhs-pale-grey">
                                             <View className="flex-1 bg-black">
+                                            
                                                 <Image
                                                 source={{uri: post.image_path}}
                                                 style={{
@@ -268,7 +320,7 @@ export default function SinglePost( {route, navigation} ) {
 
                             <View className={`flex-1 mx-5 my-3`}>
                                 <View className="">
-                                    <Text style={styles.title}>{post.title}</Text>
+                                    <Text style={customStyle.h2}>{post.title}</Text>
                                 </View>
                                 <View className="flex-row mt-3">
                                     <CategoryScroll categoryData={{ postCategories, postCategoriesError, isPostCategoriesLoading, postCategoriesRefetch }}/>
@@ -277,62 +329,133 @@ export default function SinglePost( {route, navigation} ) {
                                     <TouchableOpacity onPress={() => handleVideo()} className="w-1/3">
                                         <SmallButton text="Play" textColor='white' color='light-green' icon='play-circle' />
                                     </TouchableOpacity>
-
                                                 
-                                    {(!isDownloading && !isPaused && !isComplete) || (isCanceled) ? (
+                                    {( action !== 'Cannot download' && action === "Download" && !useLocalFile ) || action === '' || !useLocalFile || action === 'Deleted' ? (
                                         <TouchableOpacity onPress={() => handleDownload('Download', post)} className="w-2/3">
                                             <SmallButton text="Download" textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon='download-outline' />
                                         </TouchableOpacity>
                                     ) : (
                                         <View className="w-2/3">
-                                            <TouchableOpacity onPress={() => setModalVisible((current) => !current)} className="w-full">                                            
-                                                {isComplete ? (
-                                                    <SmallButton text="Downloaded" textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon='md-checkbox-outline' />
-                                                ) : (
-                                                    action === 'Download' || action === 'Resume' ? (
-                                                        <View className="flex-row px-4 py-2 justify-center items-center border-[2px] border-nhs-light-green rounded-full">
-                                                            <View className="mr-2">
-                                                                <CircularProgress value={progress * 100} radius={10} activeStrokeWidth={4} inActiveStrokeWidth={1} />
-                                                            </View>
-                                                            <Text className="text-nhs-light-green">Downloading</Text>
-                                                        </View>
-                                                    ) : (
-                                                        <SmallButton text={action === 'Download' ? 'Pause' : action === 'Pause' ? 'Resume' : 'Download'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon='download-outline' />
-                                                    )
-                                                )}
+                                            <TouchableOpacity onPress={() => setModalVisible((current) => !current)} className="w-full">
+                                                <SmallButton text={action === 'Download' && !useLocalFile ? 'Pause' : action === 'Pause' ? 'Resume' : action === 'Complete' ? 'Downloaded' : useLocalFile ? 'Downloaded' : 'error'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon={action === 'Complete' || useLocalFile && action ==='Download' ? 'md-checkbox-outline' : useLocalFile ? 'md-checkbox-outline' :'download-outline' } />
                                             </TouchableOpacity>
-                                            <Modal
+                                            <BottomModal
+                                                width={width * 80 / 100}
                                                 visible={modalVisible}
+                                                
                                                 modalAnimation={new SlideAnimation({ slideFrom: 'bottom'})}
                                                 onSwipeOut={() => setModalVisible(false)}
                                                 onTouchOutside={() => setModalVisible(false)}>
-                                                <ModalContent>
-                                                    { action === 'Download' ? (
-                                                        options.Download.map((option, i) => (
-                                                            <TouchableOpacity onPress={() => handleDownload(option, post)} key={i} className="w-full h-10 mx-3 ml-1 pt-3">
-                                                                <Text>{option}</Text>
-                                                            </TouchableOpacity>))
-                                                    ) : action === 'Pause' ? (                        
-                                                        options.Pause.map((option, i) => (
-                                                            <TouchableOpacity onPress={() => handleDownload(option, post)} key={i} className="w-full h-10 mx-3 ml-1 pt-3">
-                                                                <Text>{option}</Text>
-                                                            </TouchableOpacity>))
-                                                    ) : action === 'Resume' ? (
-                                                        options.Resume.map((option, i) => (
-                                                            <TouchableOpacity onPress={() => handleDownload(option, post)} key={i} className="w-full h-10 mx-3 ml-1 pt-3">
-                                                                <Text>{option}</Text>
-                                                            </TouchableOpacity>))
-                                                    ) : action === 'Complete' ? (
-                                                        options.Complete.map((option, i) => (
-                                                            <TouchableOpacity onPress={() => handleDownload(option, post)} key={i} className="w-full h-10 mx-3 ml-1 pt-3">
-                                                                <Text>{option}</Text>
-                                                            </TouchableOpacity>))
-                                                    ) : (
-                                                        <></>
-                                                    )}
+                                                <ModalContent className="w-full justify-center items-center">
+                                                    <View className="relative w-full justify-center items-center gap-4">
+                                                        <TouchableOpacity onPress={() => setModalVisible(false)} className="z-20 absolute top-0 right-0 ">
+                                                            <Ionicons name="close" color={'#E8EDEE'} size={20}/>
+                                                        </TouchableOpacity>
+                                                        { useLocalFile && action !== 'Complete' ? (
+                                                            <>
+                                                                <View className="w-full justify-center items-center">
+                                                                    <View className="w-full my-4 justify-center items-center">
+                                                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl mb-1">Already Downloaded</Text>
+                                                                        <Text className="text-nhs-black text-md text-center">We found a local version of {post.title}. You can view it in your library or remove it.</Text>
+                                                                    </View>
+                                                                    <View className="w-full flex-row gap-2 mt-4 ">
+                                                                        <TouchableOpacity onPress={() => handleDownload('Remove', post)} className="w-1/2">
+                                                                            <SmallButton text="Remove" textColor='white' color='red' />
+                                                                        </TouchableOpacity>
+                                                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'}); setModalVisible(false)}} className="w-1/2">
+                                                                            <SmallButton text="Go to Library" textColor='white' color='light-green' />
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                    
+                                                                </View>
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                            { action === 'Download' ? (
+                                                                <View className="w-full mx-3">
+                                                                    <View className="w-full my-4 justify-center items-center">
+                                                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl">Download</Text>
+                                                                        <Text className="text-nhs-black text-md text-center">{post.title} is still downloading... Please wait or hide the process</Text>
+                                                                    </View>
+                                                                    <View className="w-full justify-center items-center my-6">
+                                                                        <View className="flex-row w-[85%] justify-between items-center">
+                                                                            <Text className="text-lg font-bold">{progress} / {videoSize} MB</Text>
+                                                                            <Text className="text-lg font-bold">{progress * 1/100}%</Text>
+                                                                        </View>
+                                                                        <Progress.Bar progress={progress} width={width * 80 / 100} />
+                                                                    </View>
+                                                                    <View className="w-full flex-row gap-2">
+                                                                    {options.Download.map((option, i) => (
+                                                                        <TouchableOpacity onPress={() => handleDownload(option, post)} key={i} className={`w-1/2 py-4 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
+                                                                            <Text className="text-nhs-white font-bold tracking-wide text-lg">{option}</Text>
+                                                                        </TouchableOpacity>))}
+                                                                    </View>
+                                                                </View>
+                                                            ) : action === 'Pause' ? (      
+                                                                <View className="w-full mx-3 justify-center items-center">
+                                                                    <View className="w-full my-4 justify-center items-center">
+                                                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl mb-1">Download</Text>
+                                                                        <Text className="text-nhs-black text-md text-center">{post.title} is still downloading... Please wait or hide the process</Text>
+                                                                    </View>
+                                                                    <View className="h-5 w-[70%] border-t-[1px] border-nhs-pale-grey"/>
+                                                                    <View className="w-full justify-center items-center my-6">
+                                                                        <View className="flex-row w-[85%] justify-between items-center">
+                                                                            <Text className="text-lg font-bold">{progress} / {videoSize} MB</Text>
+                                                                            <Text className="text-lg font-bold">{progress * 1/100}%</Text>
+                                                                        </View>
+                                                                        <Progress.Bar progress={progress} width={width * 80 / 100} />
+                                                                    </View>
+                                                                    <View className="w-full flex-row gap-2">
+                                                                    {options.Pause.map((option, i) => (
+                                                                            <TouchableOpacity onPress={() => handleDownload(option, post)} key={i} className={`w-1/2 py-2 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
+                                                                                <Text className="text-nhs-white font-bold tracking-wide text-lg">{option}</Text>
+                                                                            </TouchableOpacity>))}
+                                                                    </View>
+                                                                </View>
+                                                            ) : action === 'Resume' ? (
+                                                                <View className="w-full mx-3">
+                                                                    <View className="w-full my-4 justify-center items-center">
+                                                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl mb-1">Download</Text>
+                                                                        <Text className="text-nhs-black text-md text-center">{post.title} is still downloading... Please wait or hide the process</Text>
+                                                                    </View>
+                                                                    <View className="w-full justify-center items-center my-6">
+                                                                        <View className="flex-row w-[85%] justify-between items-center">
+                                                                            <Text className="text-lg font-bold">{progress} / {videoSize} MB</Text>
+                                                                            <Text className="text-lg font-bold">{progress * 1/100}%</Text>
+                                                                        </View>
+                                                                        <Progress.Bar progress={progress} width={width * 80 / 100} />
+                                                                    </View>
+                                                                    <View className="w-full gap-2 flex-row">
+                                                                        {options.Resume.map((option, i) => (
+                                                                            <TouchableOpacity onPress={() => handleDownload(option, post)} key={i} className={`w-1/2 py-2 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
+                                                                                <Text className="text-nhs-white font-bold tracking-wide text-lg">{option}</Text>
+                                                                            </TouchableOpacity>))}
+                                                                    </View>
+                                                                    
+                                                                </View>
+                                                            ) : action === 'Complete' ? (
+                                                                <View className="w-full mx-3">
+                                                                    <View className="w-full my-4 justify-center items-center">
+                                                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl mb-1">Download Complete</Text>
+                                                                        <Text className="text-nhs-black text-md text-center">{post.title} has finished downloading. You can view it in your library or remove it.</Text>
+                                                                    </View>
+                                                                    <View className="w-full flex-row gap-2 mt-4 ">
+                                                                        <TouchableOpacity onPress={() => handleDownload('Remove', post)} className="w-1/2">
+                                                                            <SmallButton text="Remove" textColor='white' color='red' />
+                                                                        </TouchableOpacity>
+                                                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'}); setModalVisible(false)}} className="w-1/2">
+                                                                            <SmallButton text="Go to Library" textColor='white' color='light-green' />
+                                                                        </TouchableOpacity>
+                                                                    </View>
+                                                                </View>
+                                                            ) : (
+                                                                <></>
+                                                            )}
+                                                            </>
+                                                        )}
+                                                    </View>
                                                 </ModalContent>
-                                            </Modal>
-                                            
+                                            </BottomModal>                                            
                                         </View>                                        
                                     )}
                                     
@@ -376,11 +499,7 @@ export default function SinglePost( {route, navigation} ) {
                                         </>
                                             )
                                         }}
-                                    
-                                        
-
                                     />
-
                                 </View>
                             </View>
                             </>
@@ -391,81 +510,10 @@ export default function SinglePost( {route, navigation} ) {
                         )}
 
 
+
+
             </ScrollView>
         </View>
     </>
   )
 }
-
-const styles = StyleSheet.create({
-    favorite: {
-      position: 'absolute',
-      top: spacing.m,
-      right: spacing.m,
-      zIndex: 1,
-    },
-    title: {
-      fontSize: sizes.h2,
-      fontWeight: 'bold',
-      color: colors.black,
-    },
-    secondary: {
-      fontSize: sizes.p,
-      color: colors.white,
-    },
-    starCon: {
-      flexDirection: 'row',
-      marginVertical: 9,
-    },
-    star: {
-      marginRight: 5,
-    },
-    titleItem: {
-      fontSize: 16,
-      fontWeight: '600',
-    },
-    item: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      marginVertical: 10,
-    },
-    body: {
-      paddingHorizontal: 20,
-      flex: 1,
-    },
-    line: {
-      height: 2,
-      backgroundColor: colors.lightGreen,
-      alignSelf: 'center',
-      marginTop: 3,
-    },
-    image: {
-      width: width / 3.8,
-      height: width / 3.8,
-      borderRadius: 10,
-    },
-    footerItem: {
-      flexDirection: 'row',
-      alignItems: 'center',
-    },
-    footerCard: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-    },
-    footerItemText: {
-      fontSize: 14,
-      color: 'gray',
-      marginLeft: 10,
-      fontWeight: '500',
-    },
-    iconHeart: {
-      tintColor: colors.lightGray,
-    },
-    buttonHeart: {
-      position: 'absolute',
-      right: 15,
-      top: 1,
-    },
-  });
-

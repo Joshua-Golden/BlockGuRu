@@ -2,7 +2,7 @@ import { View, Text, SafeAreaView, ScrollView, FlatList, TouchableOpacity, Press
 import React, { useState } from 'react'
 import useFetch from '../../../hooks/useFetch';
 import getAllPosts from '../../../actions/getAllPosts';
-import getAllCategories from '../../../actions/getAllCategories';
+import getAllCategories from '../../../actions/database/getAllCategories';
 import getPostCategoryByID from '../../../actions/getPostCategoryByID';
 import { SmallButton } from '../../components/shared/Button';
 

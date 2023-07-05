@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { supabase } from "../lib/supabase";
-import { Categories } from "../types";
+import { supabase } from "../../lib/supabase";
+import { Categories } from "../../types";
 
 
 const getAllCategories = async (): Promise<Categories[]> => {

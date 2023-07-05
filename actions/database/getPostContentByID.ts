@@ -1,13 +1,13 @@
 import { useEffect, useState } from "react";
-import { supabase } from "../lib/supabase";
-import { Post } from "../types";
+import { supabase } from "../../lib/supabase";
+import { Post } from "../../types";
 import getAllPosts from "./getAllPosts";
 
 
 const getPostContentByID = async (postcontentid:number): Promise<Post[]> => { 
 
     const { data:PostContent, error } = await supabase
-      .from('PostContent')
+      .from('PostContent') 
       .select()
       .eq('id', `${postcontentid}`)
       .single()

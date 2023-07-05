@@ -1,5 +1,5 @@
-import { supabase } from "../lib/supabase";
-import { Categories } from "../types";
+import { supabase } from "../../lib/supabase";
+import { Categories } from "../../types";
 
 const getPostByCategory = async (id:number): Promise<Categories[]> => {
     const { data:Post, error } = await supabase

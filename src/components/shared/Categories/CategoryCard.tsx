@@ -26,6 +26,7 @@ export default function CategoryCard( { data, index} ) {
             <Image
                 source={{uri: post.image_path}}
                 style={styles.image}
+                contentFit='cover'
             />
         <View className="absolute bg-black opacity-50 h-full w-full"/>
         </View>
@@ -64,7 +65,6 @@ const styles = StyleSheet.create({
     image: {
       width: CARD_WIDTH,
       height: CARD_HEIGHT,
-      resizeMode: 'cover',
     },
     titleBox: {
       width: CARD_WIDTH - 20,
