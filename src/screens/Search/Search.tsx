@@ -34,7 +34,9 @@ export default function Search() {
 
   return (
     <SafeAreaView className="w-full h-full bg-nhs-white">
-      <ScrollView className="h-full">
+      <ScrollView 
+        contentContainerStyle={{flex: 1}}
+        className="h-full">
       <View className="mx-5 items-center h-full">
         <View className={`w-full h-[150px] ${!ios ? `top-10` : ``}`}>
           <Input icon='search' placeholder='What do you want to watch?' autoCorrect={false} value={searchQuery} onChangeText={(query) => handleSearch(query)}/>

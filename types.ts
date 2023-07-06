@@ -28,10 +28,11 @@ export interface Posts {
 }
 
 export interface SavedVideos {
-    key: string,
-    title: string,
-    uri: string,
-    id: string,
+    key?: string,
+    id?: string,
+    title?: string,
+    uri?: string,
+    video_path?: string,
 }
 
 export interface Cryptography {

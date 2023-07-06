@@ -4,7 +4,7 @@ import getSavedVideos from './getSavedVideos';
 import filter from 'lodash.filter'
 
 
-const saveVideos = async (key:string, id:number, title:string, uri:string): Promise<SavedVideos[]> => {
+const saveVideos = async (key:string, id:number, title:string, uri:string, video_path:string, image_path:string, fileSize:number): Promise<SavedVideos[]> => {
     var currentVideos = await getSavedVideos('posts')    
     try {
         const contains = (query, { title }) => {
@@ -20,7 +20,7 @@ const saveVideos = async (key:string, id:number, title:string, uri:string): Prom
             });
             push(filteredData)
         } else {
-            save(id, title, uri)
+            save(id, title, uri, video_path, image_path, fileSize)
         }
         
     } catch(error) {
@@ -29,7 +29,7 @@ const saveVideos = async (key:string, id:number, title:string, uri:string): Prom
     }
 
     async function push(filteredData) {
-        const data = { "id": id, "title": title, "uri": uri }
+        const data = { "id": id, "title": title, "uri": uri, "video_path": video_path, 'image_path': image_path, "fileSize": fileSize}
         filteredData.push(data)
         console.log(filteredData)
 
@@ -43,9 +43,9 @@ const saveVideos = async (key:string, id:number, title:string, uri:string): Prom
             console.error(error.message)
         } 
     }
-    async function save(id, title, uri) {
+    async function save(id, title, uri, video_path, image_path, fileSize) {
         const data = new Array
-        data.push({ "id": id, "title": title, "uri": uri })
+        data.push({ "id": id, "title": title, "uri": uri, "video_path": video_path, 'image_path':image_path, 'fileSize': fileSize })
         console.log(data)
         try  {
             console.log('saving post')

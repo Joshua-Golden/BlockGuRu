@@ -5,7 +5,7 @@ import getSavedVideos from './getSavedVideos';
 const deleteSavedVideos = async (key:string): Promise<SavedVideos[]> => {
     if( key ) {        
         try {
-            await SecureStore.setItemAsync(key, JSON.stringify(''))
+            await SecureStore.deleteItemAsync(key)
         } catch(error) {
             console.error(error.message)
         }

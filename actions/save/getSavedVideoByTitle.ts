@@ -16,7 +16,7 @@ const getSavedVideoByTitle = async (key:string, title:string): Promise<SavedVide
         const filteredData = await filter(result, (current) => {
             return contains(formattedQuery, current)
         });
-
+        console.log(filteredData);
         return ( filteredData as any ) || [];
     } catch(error) {
         console.error(error.message)
