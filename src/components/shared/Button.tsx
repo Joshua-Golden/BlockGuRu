@@ -1,7 +1,7 @@
 import React, { ComponentType, ReactElement } from 'react'
 import { View, Text } from 'react-native'
 import { useNavigation } from '@react-navigation/native';
-import { ios, customStyle, width, height } from '../../../constants/theme';
+import { customStyle, width, height } from '../../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 

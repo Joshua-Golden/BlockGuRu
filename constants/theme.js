@@ -1,6 +1,7 @@
 import { Dimensions, StyleSheet } from 'react-native';
+import * as Device from 'expo-device';
 
-export const ios = Platform.OS == 'ios';
+export const device = Device
 export const { width, height } = Dimensions.get('window');
 
 export const NHSColors = {

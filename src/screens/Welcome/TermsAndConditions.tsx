@@ -3,7 +3,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import React, { useState } from 'react'
 import { useNavigation } from '@react-navigation/native';
 import { Redirect } from 'expo-router';
-import { ios, customStyle } from '../../../constants/theme';
+import { device, customStyle } from '../../../constants/theme';
 
 // shared
 import Header from '../../components/shared/Header';
@@ -35,7 +35,7 @@ export default function TermsAndConditions({}) {
         <ScrollView className="flex-1">
           <Text className="pb-5"> {terms}</Text>
         </ScrollView>
-        <SafeAreaView className={`${ios ? 'my-1' : 'my-4' }`}>
+        <SafeAreaView className={`${device.brand === 'Apple' ? 'my-1' : 'my-4' }`}>
           <View className="flex-row justify-around items-center">
             <TouchableOpacity onPress={() => handleTerms(false)} className="w-[40%]">
               <BigButton text='Decline' color='light-blue' />

@@ -1,13 +1,12 @@
 import { View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, StyleSheet, Pressable, Animated, FlatList, RefreshControl, Modal } from 'react-native'
-import React, { useEffect, useRef, useState } from 'react'
+import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Image } from 'expo-image'
 import { Video } from 'expo-av';
 
-import CircularProgress from 'react-native-circular-progress-indicator';
-import { BottomModal, SlideAnimation, ModalContent, ModalFooter, ModalButton } from'react-native-modals';
-import * as Progress from 'react-native-progress'
-
 import { AbortController } from 'native-abort-controller'
+import * as SecureStore from 'expo-secure-store';
+import * as FileSystem from 'expo-file-system';
+import * as Progress from 'react-native-progress'
 
 // API
 import getPostCategoryByVidID from '../../../actions/database/getPostCategoryByVidID';
@@ -17,18 +16,17 @@ import useFetch from '../../../hooks/useFetch';
 
 // Icons
 import { Ionicons } from '@expo/vector-icons';
-import { colors, customStyle, sizes, spacing, width, height, ios } from '../../../constants/theme';
+import { colors, customStyle, width, shadow } from '../../../constants/theme';
 import CategoryScroll from '../../components/shared/Categories/CategoryScroll';
 import { SmallButton } from '../../components/shared/Button';
 
 import PostContent from '../../components/shared/Posts/PostContent';
-// import Video from '../Video/Video';
-import * as SecureStore from 'expo-secure-store';
-import * as FileSystem from 'expo-file-system';
 import saveVideos from '../../../actions/save/saveVideos';
 import deleteSavedVideoByTitle from '../../../actions/save/deleteSavedVideoByTitle';
 import getSavedVideoByTitle from '../../../actions/save/getSavedVideoByTitle';
 import deleteSavedVideos from '../../../actions/save/deleteSavedVideos';
+import {  BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
+
 
 
 export default function SinglePost( {route, navigation} ) {
@@ -40,12 +38,11 @@ export default function SinglePost( {route, navigation} ) {
     })
     
     const [ refresh, setRefresh ] = useState(false);
+    const [ fetchPost, setFetchPost] = useState(false)
     const onRefresh = React.useCallback(() => {
         setRefresh(true);
-        setTimeout(() => {
-            setRefresh(false);
-        }, 2000);
-      }, []);
+        setFetchPost(true)
+    }, []);
 
     // Tabs Flat List functions
     const ref = React.useRef<FlatList>(null);
@@ -80,6 +77,9 @@ export default function SinglePost( {route, navigation} ) {
         'Pause': ['Resume', 'Cancel'],
         'Resume': ['Pause', 'Cancel']
     }
+    // Bottom Sheet Variables
+    const snapPoints = useMemo(() => ['35%'], []);
+
     useEffect(() => {
         async function getSavedPost() {
             // previously paused download
@@ -91,7 +91,6 @@ export default function SinglePost( {route, navigation} ) {
                 setAction('Pause')
             }
             const result = await getSavedVideoByTitle('posts', post.title)
-            console.log(result)
             if (result.length > 0 && typeof result !== undefined && result !== null ) {
                     
                 setUseLocalFile(true)
@@ -101,11 +100,27 @@ export default function SinglePost( {route, navigation} ) {
                 setAction('Can download')
             }
         }
+        if (fetchPost === true) {
+            try {
+                post.author = route.params.post.author
+                post.id = route.params.post.id
+                post.featured = route.params.post.featured
+                post.image_path = route.params.post.image_path
+                post.video_path = route.params.post.video_path
+                post.post_content_id = route.params.post.post_content_id
+                post.title = route.params.post.title
+                post.tags = route.params.post.tags
+                console.log(post)
+            } catch (error) {
+                setError(error.message)
+                console.log(error.message)
+            } finally {
+                setFetchPost(false)
+                setRefresh(false);
+            }
+        }
         getSavedPost()
-        // if ( errorModalVisible === true ) {
-        //     setModalVisible((current) => !current)
-        // }
-    }, [])
+    }, [fetchPost])
     
     const video = React.useRef(null)
 
@@ -121,7 +136,7 @@ export default function SinglePost( {route, navigation} ) {
 
     // Video Download handler
     const [ action, setAction ] = useState('Can download')
-    const [ progress, setProgress ] = useState(0);
+    const [ videoDownloadProgress, setVideoDownloadProgress ] = useState(0);
     const [ currentVideoSize, setCurrentVideoSize ] = useState(0);
     const [ maxVideoSize, setMaxVideoSize ] = useState(0);
     const [ error, setError ] = useState('');
@@ -140,7 +155,7 @@ export default function SinglePost( {route, navigation} ) {
     };
     const callback = downloadProgress => {
         const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        setProgress(Math.round(progress));
+        setVideoDownloadProgress(progress);
         setCurrentVideoSize(Math.round(downloadProgress.totalBytesWritten / 1000000));
         setMaxVideoSize(Math.round(downloadProgress.totalBytesExpectedToWrite / 1000000));
     };
@@ -153,7 +168,6 @@ export default function SinglePost( {route, navigation} ) {
 
     function handleDownload( action, post ) { 
         console.log(action)
-        setAction(action)
 
         const savePost = async (uri, params, video_id, maxVideoSize) => {
             try {
@@ -203,6 +217,7 @@ export default function SinglePost( {route, navigation} ) {
                         } else {
                             console.log(result)
                             console.log('Delete successful')
+                            setAction('Can download')
                         }
                     } else {
                         console.log('Cannot find video path')
@@ -258,20 +273,20 @@ export default function SinglePost( {route, navigation} ) {
                 console.log("Download paused: ", params.id)
                 const title = params.title.replaceAll(' ', '').toLowerCase()
                 await SecureStore.setItemAsync(title, JSON.stringify(downloadResumable.current.savable()));
-                setAction('Resumed')
             } catch (error) {
                 setError(error)
                 setErrorModalVisible(true)
+                onRefresh()
                 console.error(error.message)
+                console.log(action)
+                setAction('Failed')
             } finally {
             }
         }
         const resumeDownload = async ( params ) => {
             try {
-                setAction('Resumed')
-
+                
                 console.log("Download resuming: ", params.id)
-
                 const downloadResumable = new FileSystem.DownloadResumable(
                     pausedDownload.url,
                     pausedDownload.fileUri,
@@ -279,6 +294,7 @@ export default function SinglePost( {route, navigation} ) {
                     callback,
                     pausedDownload.resumeData
                 );
+                setAction('Downloading')
                 const { uri } = await downloadResumable.resumeAsync();
                 savePost(uri, params, video_id, maxVideoSize)
 
@@ -326,9 +342,22 @@ export default function SinglePost( {route, navigation} ) {
         console.log(results)
     }
 
+
+    //ref
+    const bottomSheetModalRef = useRef<BottomSheetModal>(null);
+    // callbacks
+    const handlePresentModalPress = useCallback(() => {
+        setModalVisible(true)
+        bottomSheetModalRef.current?.present();
+    }, []);
+    const handleDismissModalPress = useCallback(() => {
+        setModalVisible(false)
+        bottomSheetModalRef.current?.dismiss();
+    }, []);
+
     return (
     <>
-        <View className="flex-1 h-full pb-5 bg-nhs-white">
+        <View className="relative flex-1 h-full pb-5 bg-nhs-white">
             <ScrollView className="flex-1"
                 refreshControl={<RefreshControl refreshing={refresh} onRefresh={onRefresh} />}
             >
@@ -399,13 +428,13 @@ export default function SinglePost( {route, navigation} ) {
                                         <SmallButton text="Play" textColor='white' color='light-green' icon='play-circle' />
                                     </TouchableOpacity>
                                     {( action !== 'Cannot download' && action === "Can download" && !useLocalFile ) || action === '' || !useLocalFile || action === 'Deleted' ? (
-                                        <TouchableOpacity onPress={() => handleDownload('Download', post)} className="w-2/3">
+                                        <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-2/3">
                                             <SmallButton text="Download" textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon='download-outline' />
                                         </TouchableOpacity>
                                     ) : (
                                         <View className="w-2/3">
-                                            <TouchableOpacity onPress={() => setModalVisible((current) => !current)} className="w-full">
-                                                <SmallButton text={action === 'Download' && !useLocalFile ? 'Pause' : action === 'Pause' ? 'Resume' : action === 'Complete' ? 'Downloaded' : useLocalFile ? 'Downloaded' : 'error'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon={action === 'Complete' || useLocalFile && action ==='Download' ? 'md-checkbox-outline' : useLocalFile ? 'md-checkbox-outline' :'download-outline' } />
+                                            <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-full">
+                                                <SmallButton text={action === 'Download' && !useLocalFile ? 'Pause' : action === 'Pause' ? 'Resume' : action === 'Complete' ? 'Downloaded' : action === 'Downloading' ? 'Downloading' : useLocalFile ? 'Downloaded' : 'error'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon={action === 'Complete' || useLocalFile && action ==='Download' ? 'md-checkbox-outline' : useLocalFile ? 'md-checkbox-outline' :'download-outline' } />
                                             </TouchableOpacity>                                          
                                         </View>                                        
                                     )}                                    
@@ -459,20 +488,23 @@ export default function SinglePost( {route, navigation} ) {
                             </>
                         )}
             </ScrollView>
-            
+            { modalVisible ? (
+                <>
+                    <TouchableOpacity onPress={() => handleDismissModalPress()} className="absolute bg-black/30 h-full w-full" />
+                </>
+            ) : (
+                <></>
+            )}
 
-            {/* Download Modal */}
-            <BottomModal
-                width={width * 80 / 100}
-                visible={modalVisible}                
-                modalAnimation={new SlideAnimation({ slideFrom: 'bottom' })}
-                onSwipeOut={() => setModalVisible(false)}
-                onTouchOutside={() => setModalVisible(false)}>
-                <ModalContent className="w-full justify-center items-center">
-                    <View className="relative w-full justify-center items-center gap-4">
-                        <TouchableOpacity onPress={() => setModalVisible(false)} className="z-20 absolute top-0 right-0 ">
-                            <Ionicons name="close" color={'#E8EDEE'} size={20}/>
-                        </TouchableOpacity>
+            {/* DownloadModal */}
+            <BottomSheetModalProvider>
+                <View>
+                    <BottomSheetModal
+                    enablePanDownToClose
+                    onDismiss={() => setModalVisible(false)}
+                    ref={bottomSheetModalRef}
+                    snapPoints={snapPoints}>
+                    <View className="relative bg-nhs-white w-full px-8 rounded-t-[40px] bottom-0 justify-center items-center">
                         { useLocalFile && action !== 'Complete' ? (
                             <>
                                 <View className="w-full justify-center items-center">
@@ -481,10 +513,10 @@ export default function SinglePost( {route, navigation} ) {
                                         <Text className="text-nhs-black text-md text-center">We found a local version of {post.title}. You can view it in your library or remove it.</Text>
                                     </View>
                                     <View className="w-full flex-row gap-2 mt-4 ">
-                                        <TouchableOpacity onPress={() => {handleDownload('Remove', post), setModalVisible(false)}} className="w-1/2">
+                                        <TouchableOpacity onPress={() => {handleDownload('Remove', post)}} className="w-1/2">
                                             <SmallButton text="Remove" textColor='white' color='red' />
                                         </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'}); setModalVisible(false)}} className="w-1/2">
+                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'}); }} className="w-1/2">
                                             <SmallButton text="Go to Library" textColor='white' color='light-green' />
                                         </TouchableOpacity>
                                     </View>
@@ -493,25 +525,39 @@ export default function SinglePost( {route, navigation} ) {
                             </>
                         ) : (
                             <>
-                            { action === 'Downloading' || action ==='Pause' ? (
+                            { action === 'Can download' || action ==='Download' || action === 'Failed' ? (
+                                <View className="w-full mx-3">
+                                    <View className="w-full my-4 justify-center items-center">
+                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl">Available to Download</Text>
+                                        <Text className="text-nhs-black text-md text-center">{post.title} is available for download.</Text>
+                                    </View>
+                                    <View className="w-full flex-row gap-2 mt-4">
+                                    <TouchableOpacity onPress={() => {handleDownload('Download', post)}} className="w-1/2">
+                                            <SmallButton text="Download" textColor='white' color='light-green' />
+                                        </TouchableOpacity>
+                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'})}} className="w-1/2">
+                                            <SmallButton text="Go to Library" textColor='white' color='light-green' />
+                                        </TouchableOpacity>
+                                    </View>
+                                </View>
+                            ) : action === 'Downloading' || action ==='Pause' ? (
                                 <View className="w-full mx-3">
                                     <View className="w-full my-4 justify-center items-center">
                                         <Text className="text-nhs-light-green font-bold tracking-wide text-2xl">Download</Text>
                                         <Text className="text-nhs-black text-md text-center">{post.title} is still downloading... Please wait or hide the process</Text>
                                     </View>
                                     <View className="w-full justify-center items-center my-6">
-                                        <View className="flex-row w-[85%] justify-between items-center">
+                                        <View className="flex-row w-full justify-between items-center">
                                             <Text className="text-lg font-bold">{currentVideoSize} / {maxVideoSize} MB</Text>
-                                            <Text className="text-lg font-bold">{progress}%</Text>
+                                            <Text className="text-lg font-bold">{Math.round(videoDownloadProgress * 100)}%</Text>
                                         </View>
                                         <View className="w-full">
-                                            <Progress.Bar progress={progress} width={null} />
-
+                                            <Progress.Bar progress={Math.round(videoDownloadProgress * 100)} width={null} />
                                         </View>
                                     </View>
                                     <View className="w-full flex-row gap-2">
                                     {options.Download.map((option, i) => (
-                                        <TouchableOpacity onPress={() => {handleDownload(option, post)}} key={i} className={`w-1/2 py-4 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
+                                        <TouchableOpacity onPress={() => {handleDownload(option, post)}} key={i} className={`w-1/2 px-4 py-2 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
                                             <Text className="text-nhs-white font-bold tracking-wide text-lg">{option}</Text>
                                         </TouchableOpacity>))}
                                     </View>
@@ -525,15 +571,15 @@ export default function SinglePost( {route, navigation} ) {
                                     <View className="w-full justify-center items-center my-6">
                                         <View className="flex-row w-[85%] justify-between items-center">
                                             <Text className="text-lg font-bold">{currentVideoSize} / {maxVideoSize} MB</Text>
-                                            <Text className="text-lg font-bold">{progress}%</Text>
+                                            <Text className="text-lg font-bold">{Math.round(videoDownloadProgress * 100)}%</Text>
                                         </View>
                                         <View className="w-full">
-                                            <Progress.Bar progress={progress} width={null} />
+                                            <Progress.Bar progress={Math.round(videoDownloadProgress * 100)} width={null} />
                                         </View>
                                     </View>
                                     <View className="w-full gap-2 flex-row">
                                         {options.Resume.map((option, i) => (
-                                            <TouchableOpacity onPress={() => {handleDownload(option, post), setModalVisible(false)}} key={i} className={`w-1/2 py-2 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
+                                            <TouchableOpacity onPress={() => {handleDownload(option, post)}} key={i} className={`w-1/2 px-4 py-2 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
                                                 <Text className="text-nhs-white font-bold tracking-wide text-lg">{option}</Text>
                                             </TouchableOpacity>))}
                                     </View>
@@ -546,7 +592,7 @@ export default function SinglePost( {route, navigation} ) {
                                         <Text className="text-nhs-black text-md text-center">{post.title} has finished downloading. You can view it in your library or remove it.</Text>
                                     </View>
                                     <View className="w-full flex-row gap-2 mt-4 ">
-                                        <TouchableOpacity onPress={() => {handleDownload('Remove', post), setModalVisible(false)}} className="w-1/2">
+                                        <TouchableOpacity onPress={() => {handleDownload('Remove', post)}} className="w-1/2">
                                             <SmallButton text="Remove" textColor='white' color='red' />
                                         </TouchableOpacity>
                                         <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'}); setModalVisible(false)}} className="w-1/2">
@@ -560,8 +606,12 @@ export default function SinglePost( {route, navigation} ) {
                             </>
                         )}
                     </View>
-                </ModalContent>
-            </BottomModal>
+                </BottomSheetModal>
+                </View>
+
+            </BottomSheetModalProvider>
+
+            
         </View>
     </>
   )

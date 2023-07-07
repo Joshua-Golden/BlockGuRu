@@ -15,10 +15,15 @@ interface LibraryCardProps {
 export default function LibraryCard({ data, index, handleDelete }: LibraryCardProps) {
     const navigation = useNavigation();
 
+    function handlePlay() {
+
+    }
+
+    console.log(data)
   return (
     <>
         <TouchableOpacity
-            className=""
+            className="w-full "
             onPress={() => navigation.navigate('post' , { post: data })}>
             <View className="flex-row justify-start gap-3 items-center my-1">
                 <View className="flex-row rounded-lg overflow-hidden">
@@ -37,11 +42,17 @@ export default function LibraryCard({ data, index, handleDelete }: LibraryCardPr
 
                    <View className="flex-row mt-2 w-full justify-between items-center">
                     <View className="px-2 py-1 rounded-lg  bg-nhs-light-green/20">
-                            <Text className="text-nhs-light-green">{Math.round(data.fileSize / 1000000)}{data.videoSize} MB</Text>
-                        </View>
+                        <Text className="text-nhs-light-green">{Math.round(data.fileSize / 1000000)}{data.videoSize} MB</Text>
+                    </View>
+                    <View className="flex-row gap-3 justify-start items-center">
+                        <TouchableOpacity onPress={() => handlePlay(data.video_path)}>
+                            <Ionicons name="play-circle" color={'#78BE20'} size={30} />
+                        </TouchableOpacity>
                         <TouchableOpacity onPress={() => handleDelete(data.id, data.title)}>
                             <Ionicons name="ios-trash" color={'#78BE20'} size={25} />
                         </TouchableOpacity>
+                    </View>
+                    
                    </View>
                 </View>
                 

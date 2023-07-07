@@ -1,4 +1,4 @@
-import { View, Text, SafeAreaView, ScrollView, FlatList, TouchableOpacity, Pressable, RefreshControl } from 'react-native'
+import { View, Text, SafeAreaView, ScrollView, FlatList, TouchableOpacity, Pressable, RefreshControl, StatusBar } from 'react-native'
 import React, { useEffect, useState } from 'react'
 
 import getSavedVideos from '../../../actions/save/getSavedVideos';
@@ -9,7 +9,7 @@ import deleteSavedVideos from '../../../actions/save/deleteSavedVideos';
 import SecureStore from 'expo-secure-store'
 import { Image } from 'expo-image';
 import empty from '../../assets/empty.jpg';
-import { customStyle, ios } from '../../../constants/theme';
+import { customStyle, device } from '../../../constants/theme';
 
 
 export default function Library() {
@@ -63,25 +63,21 @@ export default function Library() {
     console.log(results)
   }
 
-
-  console.log(videos)
-
   return (
     <SafeAreaView className="w-full h-full px-5 bg-nhs-white">
-      <View className={`flex-row w-full justify-between items-center p-5 mr-3 ${ios ? '': 'mt-10'}`}>
+      <StatusBar barStyle='dark-content' />
+
+      <View className={`flex-row w-full justify-between items-center p-5 mr-3 ${device.osName === 'iOS' ? '': 'mt-10'}`}>
         <View className="flex-row justify-start items-center">
           <Text style={customStyle.h2}>Library</Text>
         </View>
       </View>
-        <View className="h-full w-full">
-          <ScrollView
-            className="h-full"
-            contentContainerStyle={{ flex: 1 }}
-            refreshControl={<RefreshControl refreshing={refresh} onRefresh={onRefresh} />}
-          >
-            <View>
-
-            </View>
+      <View className="h-full w-full">
+        <ScrollView
+          className="w-full h-full ml-5"
+          contentContainerStyle={{ flex: 1 }}
+          refreshControl={<RefreshControl refreshing={refresh} onRefresh={onRefresh} />}
+        >
           { videos.length === 0 ? (
             <View className="h-full justify-center items-center">
               <View className="justify-center  items-center">

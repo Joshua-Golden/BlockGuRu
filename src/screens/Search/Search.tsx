@@ -8,7 +8,7 @@ import Header from '../../components/shared/Header';
 import SearchCard from '../../components/shared/Search/SearchCard';
 import useFetch from '../../../hooks/useFetch';
 import getAllCategories from '../../../actions/database/getAllCategories';
-import { ios, width } from '../../../constants/theme';
+import { device, width } from '../../../constants/theme';
 
 export default function Search() {
   const { data: posts, isLoading: isPostsLoading, error: postError, refetch: postsRefetch } = useFetch(getAllPosts, '*')
@@ -38,7 +38,7 @@ export default function Search() {
         contentContainerStyle={{flex: 1}}
         className="h-full">
       <View className="mx-5 items-center h-full">
-        <View className={`w-full h-[150px] ${!ios ? `top-10` : ``}`}>
+        <View className={`w-full h-[150px] ${device.osName === 'Android' ? `top-10` : ``}`}>
           <Input icon='search' placeholder='What do you want to watch?' autoCorrect={false} value={searchQuery} onChangeText={(query) => handleSearch(query)}/>
         </View>
         <View className="flex-col h-full justify-center items-start left-0">

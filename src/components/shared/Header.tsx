@@ -1,7 +1,7 @@
 import React from 'react'
 import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native'
 import { useNavigation } from '@react-navigation/native';
-import { ios, styles, width, height } from '../../../constants/theme';
+import { styles, width, height } from '../../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
 interface HeaderProps{

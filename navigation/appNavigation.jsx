@@ -23,7 +23,7 @@ import Procedure from '../src/screens/Post/Tabs/Procedure';
 import { Ionicons, Foundation, Octicons } from '@expo/vector-icons';
 
 // Theme
-import { colors, ios, NHSColors } from '../constants/theme'
+import { colors, device, NHSColors } from '../constants/theme'
 
 const Stack = createNativeStackNavigator();
 const Tab = createBottomTabNavigator();
@@ -52,10 +52,10 @@ function HomeTabs() {
             tabBarShowLabel: false,
             tabBarIcon: ({ focused }) => menuIcons(route, focused),
             tabBarIconStyle: {
-                marginTop: ios? 10 : 0,
+                marginTop: device.osName === "iOS" ? 10 : 0,
             },
             tabBarStyle: {
-                height: ios? 80 : 70,
+                height: device.osName === "iOS" ? 80 : 70,
                 justifyContent:'center',
                 alignItems: 'center',
             },

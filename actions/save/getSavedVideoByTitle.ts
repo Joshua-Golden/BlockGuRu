@@ -3,10 +3,10 @@ import filter from 'lodash.filter'
 import { SavedVideos } from "../../types";
 import getSavedVideos from './getSavedVideos';
 
-const getSavedVideoByTitle = async (key:string, title:string): Promise<SavedVideos[]> => {   
+const getSavedVideoByTitle = async (key:string, title:string): Promise<SavedVideos[]> => {
     try {
         const result = await getSavedVideos(key)
-        const contains = (query, { title }) => {
+        const contains = (title , query) => {           
             if (title.toLowerCase().match(query)) {
                 return true;
             }
@@ -16,7 +16,6 @@ const getSavedVideoByTitle = async (key:string, title:string): Promise<SavedVide
         const filteredData = await filter(result, (current) => {
             return contains(formattedQuery, current)
         });
-        console.log(filteredData);
         return ( filteredData as any ) || [];
     } catch(error) {
         console.error(error.message)

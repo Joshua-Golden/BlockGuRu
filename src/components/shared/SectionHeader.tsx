@@ -9,7 +9,7 @@ import NHS_Logo_Blue from '../../assets/logos/NHS/NHS-blue-white.jpg';
 
 interface SectionHeaderProps {
   title: string,
-  onPress?: () => void,
+  onPress?(): void,
   buttonTitle?: string,
   isButton?: Boolean,
   logo?: Boolean,

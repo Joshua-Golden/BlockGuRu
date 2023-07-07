@@ -14,6 +14,10 @@ export interface Categories {
     title: string[],
     region: string[]
 }
+export interface Regions {
+    id: BigInt,
+    title: string,
+}
 export interface PostCategory {
     id: number[],
     post_id: number[],
@@ -33,11 +37,4 @@ export interface SavedVideos {
     title?: string,
     uri?: string,
     video_path?: string,
-}
-
-export interface Cryptography {
-    password: string,
-    salt: string,
-    cost: number,
-    length: number,
 }

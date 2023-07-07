@@ -21,11 +21,14 @@ import NHS_Logo_Blue from '../../assets/logos/NHS/NHS-blue-white.jpg';
 
 // Icons
 import { Ionicons } from '@expo/vector-icons';
+import BlockRegions from '../../components/shared/Categories/BlockRegions';
+import getAllRegions from '../../../actions/database/getAllRegions';
 
 export default function Home({ navigation }) {
 
   const { data: posts, isLoading: isPostsLoading, error: postError, refetch: postsRefetch } = useFetch(getAllPosts, '*')
   const { data: categories, isLoading: isCategoriesLoading, error: categoriesError, refetch: categoriesRefetch } = useFetch(getAllCategories, '*')
+  const { data: regions, isLoading: isRegionsLoading, error: regionsError, refetch: regionsRefetch } = useFetch(getAllRegions, '*')
   const params = [ 2, 12, 23]
   const { data: postCategories, isLoading: isPostCategoriesLoading, error: postCategoriesError, refetch: postCategoriesRefetch } = useFetch(getPostCategoryByID, params)
 
@@ -83,34 +86,15 @@ export default function Home({ navigation }) {
                 <Text>Something went wrong</Text>
               ) : typeof posts !== undefined && posts !== null && posts.length !== null && posts.length > 0 ? (
                 <>
-                  <SectionHeader title='Featured Posts' buttonTitle='View All' onPress={() => {}} isButton={true}/>
-                  <FeaturedPosts postData={{ posts, isPostsLoading, postError, postsRefetch }} />
+                  <SectionHeader title='Block Regions' buttonTitle='View All' onPress={() => {}} isButton={true}/>
+                  <BlockRegions regionData={{ regions, isRegionsLoading, regionsError, regionsRefetch }} />
                 </>
               ) : (
                 <>
                   <Text>No data available</Text>
                 </>
               )}
-          </View>
-
-          <View className="flex-1">
-            {isPostsLoading ? (             
-                <View className="h-full justify-center items-center">
-                  <ActivityIndicator size='large' color="black" />
-                </View>
-              ) : postError ? (
-                <Text>Something went wrong</Text>
-              ) : typeof posts !== undefined && posts !== null && posts.length !== null && posts.length > 0 ? (
-                <>
-                  <SectionHeader title='Newest Releases' buttonTitle='View All' onPress={() => {}} isButton={true}/>
-                  <NewReleases postData={{ posts, isPostsLoading, postError, postsRefetch }} />
-                </>
-              ) : (
-                <>                
-                  <Text>No data available</Text>
-                </>
-              )}
-          </View>
+          </View>          
         </View>
 
         <View className="">
