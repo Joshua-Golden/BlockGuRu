@@ -1,11 +1,10 @@
 import { View, Text } from 'react-native'
 import React from 'react'
 
-export default function Tabs() {
-  console.log("Showing")
+export default function AllCategories() {
   return (
     <View>
-      <Text>Tabs</Text>
+      <Text>AllCategories</Text>
     </View>
   )
 }

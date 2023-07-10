@@ -1,48 +1,108 @@
-import { View, Text, SafeAreaView, ScrollView, FlatList, TouchableOpacity, Pressable, RefreshControl, StatusBar } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { View, Text, SafeAreaView, ScrollView, FlatList, TouchableOpacity, Pressable, RefreshControl, StatusBar, Alert } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
 
 import getSavedVideos from '../../../actions/save/getSavedVideos';
 import LibraryCard from '../../components/shared/Library/LibraryCard';
 import deleteSavedVideoByID from '../../../actions/save/deleteSavedVideoByID';
 import deleteSavedVideos from '../../../actions/save/deleteSavedVideos';
 
-import SecureStore from 'expo-secure-store'
+import * as Network from 'expo-network';
+import * as SecureStore from 'expo-secure-store'
 import { Image } from 'expo-image';
+
 import empty from '../../assets/empty.jpg';
 import { customStyle, device } from '../../../constants/theme';
 
 
-export default function Library() {
-  const [ refresh, setRefresh ] = useState(false);
-  const onRefresh = React.useCallback(() => {
-      setRefresh(true);
-      setFetchVideos(true)
-      setRefresh(false);
+export default function Library({ navigation }) {
+  const [ isLoading, setIsLoading ] = useState(false);
+  const [ isOffline, setIsOffline ] = useState(false);
+  const [ savedPostsData, setSavedPostsData ] = useState([]);
 
-    }, []);
+  async function checkNetworkConnection() {
+    try {
+      setIsLoading(true)
+      const isAirplaneMode = await Network.isAirplaneModeEnabledAsync()
+      if (isAirplaneMode) {
+        setIsOffline(true)
+      } else {
+        const network = await Network.getNetworkStateAsync();
+        if ( network.isConnected === true && network.isInternetReachable === true ) {
+          setIsOffline(false)
+        } else {
+          setIsOffline(true)
+        }
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  async function checkTerms() {
+    try {
+      setIsLoading(true)
+      const termsAccepted = await SecureStore.getItemAsync('termsAccepted');
+      if( termsAccepted === null || termsAccepted === undefined || termsAccepted.length <= 0 ) {
+          await SecureStore.setItemAsync('termsAccepted', 'false');
+          navigation.navigate('Welcome');    
+      } else if ( termsAccepted === 'true' ) { 
+          navigation.navigate('Home');
+      }
+    } catch (error) {
+      console.log(error)
+      Alert.alert(
+          'Something went wrong',
+          error.message,
+          [{
+              text: 'Try Again',
+              onPress: () => checkTerms(),
+          }]
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
-  const [ videos, setVideos ] = useState([])
-  const [ fetchVideos, setFetchVideos ] = useState(false)
-  const [ error, setError ] = useState('')
+  const onRefresh = useCallback(() => {
+    try {
+      setIsLoading(true);
+      checkNetworkConnection()
+      if (isOffline === false) {
+        savedPosts()
+      }
+    } catch(error) {
+      console.log(error.message)
+      Alert.alert(
+        "Something went wrong",
+        error.message,
+        [{
+          text: "Try Again",
+          onPress: onRefresh
+        }])
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  async function savedPosts() {
+    try {
+      setIsLoading(true)
+      const results = await getSavedVideos('posts')
+      setSavedPostsData(results)
+    } catch (error) {
+      console.log(error.message)
+      Alert.alert(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
 
   useEffect(() => {
-    async function getVideos() {
-      try {
-        const results = await getSavedVideos('posts')
-        setVideos(results)
-      } catch (error) {
-        console.log(error.message)
-        setError(error.message)
-      } finally {
-        setFetchVideos(false)
-      }
-    }
-    getVideos()
-    if (fetchVideos === true) {
-      getVideos()
-    }
-
-}, [fetchVideos])
+    checkNetworkConnection()
+    checkTerms()
+}, [])
 
   async function handleDelete(id, title) {
     try {
@@ -51,7 +111,13 @@ export default function Library() {
       await SecureStore.deleteItemAsync(videoTitle)
     } catch (error) {
       console.log(error.message)
-      setError(error.message)
+      Alert.alert(
+        'Something went wrong',
+        error.message,
+        [{
+          text: 'Try Again',
+          onPress: () => handleDelete(id, title),
+        }])
 
     } finally {
       onRefresh()      
@@ -74,13 +140,13 @@ export default function Library() {
       </View>
       <View className="h-full w-full">
         <ScrollView
-          className="w-full h-full ml-5"
+          className="w-full h-full"
           contentContainerStyle={{ flex: 1 }}
-          refreshControl={<RefreshControl refreshing={refresh} onRefresh={onRefresh} />}
+          refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}
         >
-          { videos.length === 0 ? (
-            <View className="h-full justify-center items-center">
-              <View className="justify-center  items-center">
+          { savedPostsData.length === 0 ? (
+            <View className="h-full items-center">
+              <View className="items-center">
                 <Image 
                   style={{
                       width:300,
@@ -91,12 +157,12 @@ export default function Library() {
                 />
               </View>
               <Text className="text-center text-xl text-nhs-light-green font-bold">Your Library is Empty</Text>
-              <Text className="text-center">Looks like you haven't donwloaded any videos at all.</Text>
-              <Text className="text-center">Maybe try refreshing. Pull down to refresh</Text>
+              <Text className="text-center">Looks like you haven't downloaded any videos at all.</Text>
+              <Text className="text-center">Maybe try pulling down to refresh.</Text>
             </View>
           ) : (
             <FlatList
-              data={videos}
+              data={savedPostsData}
               scrollEnabled={false}
               keyExtractor={(item) => item.id}
               renderItem={({item, index}) => (

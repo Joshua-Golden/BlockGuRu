@@ -6,7 +6,7 @@ export default function CategoryItem({ data, index }) {
     const navigation = useNavigation()
   return (
     <TouchableOpacity 
-        onPress={() => navigation.navigate('category', {category: data})}
+        onPress={() => navigation.navigate('Category', {category: data})}
         className="flex-1 justify-center items-center border-2 rounded-lg border-nhs-light-green px-3 py-2"
     >
       <Text className="text-nhs-light-green">{data.title}</Text>

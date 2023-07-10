@@ -1,8 +1,11 @@
-import { View, Text, SafeAreaView, TouchableOpacity } from 'react-native'
-import React, { Dispatch, SetStateAction } from 'react'
-
+import { View, Text, SafeAreaView, TouchableOpacity, Alert } from 'react-native'
+import React, { Dispatch, SetStateAction, useCallback, useEffect, useState } from 'react'
+import * as Network from 'expo-network'
 import { Image } from 'expo-image';
 import { LinearGradient } from 'expo-linear-gradient';
+
+import * as SecureStore from 'expo-secure-store';
+import { ActivityIndicator } from 'react-native';
 
 // Assets
 import anesthetic from '../../assets/anesthetic.png';
@@ -10,19 +13,79 @@ import NHS_Logo_Blue from '../../assets/logos/NHS/NHS-blue-white.jpg';
 import Pajunk from '../../assets/logos/Pajunk/png/PA.png';
 import { customStyle, width, height } from '../../../constants/theme';
 import { useNavigation } from '@react-navigation/native';
-import {BigButton} from '../../components/shared/Button';
+import { BigButton } from '../../components/shared/Button';
 
-interface WelcomeProps {
-    termsAccepted: Boolean;
-}
-
-export default function Welcome({ termsAccepted }: WelcomeProps ) {
+export default function Welcome( ) {
     const navigation = useNavigation();
+    const [ isLoading, setIsLoading ] = useState( true );
+    const [ isOffline, setIsOffline ] = useState( true );
+
+    async function checkNetworkConnection() {
+        try {
+          setIsLoading(true)
+          const isAirplaneMode = await Network.isAirplaneModeEnabledAsync()
+          if (isAirplaneMode) {
+            setIsOffline(true)
+          } else {
+            const network = await Network.getNetworkStateAsync();
+            if ( network.isConnected === true && network.isInternetReachable === true ) {
+              setIsOffline(false)
+            } else {
+              setIsOffline(true)
+            }
+          }
+        } catch (error) {
+          console.log(error);
+          Alert.alert(error.message)
+        } finally {
+          setIsLoading(false)
+        }
+      }
+    
+    async function checkTerms() {
+        setIsLoading(true)
+        try {
+            checkNetworkConnection()
+            if (isOffline) {
+                navigation.navigate('Home' , { screen: 'librarytab'});
+            } else {
+                const termsAccepted = await SecureStore.getItemAsync('termsAccepted');
+                if( termsAccepted === null || termsAccepted === undefined || termsAccepted.length <= 0 ) {
+                    await SecureStore.setItemAsync('termsAccepted', 'false');
+                    navigation.navigate('Welcome');    
+                } else if ( termsAccepted === 'true' ) { 
+                    navigation.navigate('Home');
+                }
+            }
+        } catch (error) {
+            console.log(error)
+            Alert.alert(
+                'Something went wrong',
+                error.message,
+                [{
+                    text: 'Try Again',
+                    onPress: () => checkTerms(),
+                }]
+            )
+        } finally {
+            setIsLoading(false)
+
+        }
+    }
+
+    useEffect(() => {
+        checkNetworkConnection();
+        checkTerms();
+    }, [])
 
   return (
     <>
-    {termsAccepted ?
-        <></>
+    {isLoading ?
+        <>
+            <View className="h-full w-full justify-center items-center">
+                <ActivityIndicator size='large' color="black" />
+            </View>
+        </>
     :
         <View className="flex-1 justify-center items-center bg-nhs-white">
             <View className="flex-1 justify-center items-center bg-nhs-white">

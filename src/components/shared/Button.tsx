@@ -36,7 +36,7 @@ export function SmallButton({ text, textColor, color, borderColor, icon, transpa
 
   return (
   <>
-    <View className={`flex-row px-4 py-2 justify-center items-center rounded-full ${transparent ? ` border-[2px] bg-transparent border-nhs-${color}` : `bg-nhs-${color ? color : `bg-nhs-light-green`}`}`}>
+    <View className={`flex-row px-4 py-2 justify-center items-center rounded-full ${transparent ? ` border-[2px] bg-transparent border-nhs-${borderColor}` : `bg-nhs-${color ? color : `bg-nhs-light-green`}`}`}>
         {icon 
         ? <>
             <View className={` ${!text ? `mr-0` : `mr-2`}`}>

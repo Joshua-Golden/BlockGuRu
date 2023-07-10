@@ -41,7 +41,7 @@ export default function CategoryList({ categoryData, postData }) {
       keyExtractor={(item) => item[0].id}
       renderItem={({item, index}) => (
         <>
-          <SectionHeader title={item[0].title} buttonTitle='View All' onPress={() => navigation.navigate('category', { category: item[0], postCategories: categoryPosts[index][1] })} isButton={true}/>
+          <SectionHeader title={item[0].title} buttonTitle='View All' onPress={() => navigation.navigate('Category', { category: item[0], postCategories: categoryPosts[index][1] })} isButton={true}/>
           <>
             <FlatList 
               data={item[1].slice(0,4)}

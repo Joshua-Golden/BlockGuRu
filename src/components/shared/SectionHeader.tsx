@@ -1,5 +1,5 @@
 import { View, Text, TouchableOpacity } from 'react-native'
-import { customStyle, shadow, colors, sizes, spacing, ios } from '../../../constants/theme'
+import { customStyle, shadow, colors, sizes, spacing, ios, device } from '../../../constants/theme'
 import React from 'react'
 import { Image } from 'expo-image'
 
@@ -17,7 +17,7 @@ interface SectionHeaderProps {
 
 export default function SectionHeader( {title, onPress, buttonTitle, isButton} : SectionHeaderProps) {
   return (
-    <View className={`flex-row w-full justify-between items-center p-5 mr-3 ${ios ? '': 'mt-10'}`}>
+    <View className={`flex-row w-full justify-between items-center p-5 mr-3`}>
       <View className="flex-row justify-start items-center">
         <Text style={customStyle.h2}>{title}</Text>
 

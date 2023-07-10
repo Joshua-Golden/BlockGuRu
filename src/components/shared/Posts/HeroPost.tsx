@@ -7,11 +7,12 @@ import { useNavigation } from '@react-navigation/native';
 
 export default function HeroPost( { postData } ) {
   const navigation = useNavigation()
-
   const { posts, isPostsLoading, postError, postsRefetch } = postData
+  
   const post = posts[0]
+  
   return (
-    <View className="flex-1 w-full h-full bg-nhs-pale-grey">
+    <View className="flex w-full h-full bg-nhs-pale-grey">
       <View className="flex-1 bg-black">
         <Image
           source={{uri: post.image_path}}
@@ -21,7 +22,7 @@ export default function HeroPost( { postData } ) {
           }}
           contentFit='cover'
         />
-        <View className="absolute bg-black opacity-40 h-full w-full"/>
+        <View className="absolute bg-black/50 h-full w-full"/>
       </View>
       <View className="absolute bottom-0 pb-4 px-4 w-full">
         <View className="mb-3 ">
@@ -31,11 +32,11 @@ export default function HeroPost( { postData } ) {
             </View>
         </View>
         <View className="w-full gap-2 flex-row justify-start items-center">
-            <TouchableOpacity onPress={() => navigation.navigate('post', {post: post})}>
-                <SmallButton text="Play" color='light-green' icon='play-circle' />
+            <TouchableOpacity onPress={() => navigation.navigate('VideoPlayer', {post: post})}>
+                <SmallButton text="Play" borderColor='light-green' textColor='white' color='light-green' icon='play-circle' />
             </TouchableOpacity>
-            <TouchableOpacity onPress={() => navigation.navigate('post', {post: post})}>
-                <SmallButton text="Read More" color='white' transparent={true} icon='md-information-circle-sharp' />
+            <TouchableOpacity onPress={() => navigation.navigate('Post', {post: post})}>
+                <SmallButton text="Read More" borderColor='light-green' textColor='light-green' color='white' transparent={true} icon='md-information-circle-sharp' />
             </TouchableOpacity>
         </View>
 

@@ -9,38 +9,24 @@ const CARD_WIDTH = sizes.width - 230;
 const CARD_HEIGHT = 270;
 const CARD_WIDTH_SPACING = CARD_WIDTH + spacing.l;
 
-export default function CategoryCard( { data, index} ) {
+export default function BlockRegionsCard( { data, index} ) {
   const navigation = useNavigation();
-    const post = data.Post
   return (
-    <View className="h-full justify-start items-center">
-      
-      <TouchableOpacity       
-        onPress={() => navigation.navigate('Post' , { post: post })}
+    <>
+      <TouchableOpacity 
+        onPress={() => navigation.navigate('Category', { category: data })}
         style={{
-            marginLeft: spacing.m
-            }}
-        >
-        <View className={`w-[${CARD_WIDTH}] h-[${CARD_HEIGHT}] my-3`} style={[styles.card, shadow.dark]}>
-        <View className={`w-[${CARD_WIDTH}] h-[${CARD_HEIGHT}] rounded-lg overflow-hidden`}>
-            <Image
-                source={{uri: post.image_path}}
-                style={styles.image}
-                contentFit='cover'
-            />
-        <View className="absolute bg-black opacity-50 h-full w-full"/>
+          marginLeft: spacing.m,
+          marginRight: index === data.length - 1 ? spacing.l : 0,
+          }}
+      >
+        <View className="bg-nhs-light-blue rounded-2xl" style={[styles.card, shadow.dark]}>
+          <View className="w-full h-full px-2 justify-center items-center">
+            <Text style={styles.title}>{data.title}</Text>
+          </View>
         </View>
-        <View style={styles.titleBox}>
-            <Text style={styles.title}>{post.title}</Text>
-            <View className="flex-row gap-1">
-            <Text className="capitalize" style={styles.secondary}>{post.tags.join(', ')}</Text>
-            </View>
-            <Text> {post.tag}</Text>
-        </View>
-        </View>
-    </TouchableOpacity>
-
-    </View>
+      </TouchableOpacity>
+    </>
   )
 }
 
