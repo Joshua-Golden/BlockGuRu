@@ -1,76 +1,73 @@
-import { View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, StyleSheet, Pressable, Animated, FlatList, RefreshControl, Modal } from 'react-native'
+import { View, Text, TouchableOpacity, ScrollView, StatusBar, ActivityIndicator, StyleSheet, Pressable, Animated, FlatList, RefreshControl, Modal, Alert } from 'react-native'
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import { Image } from 'expo-image'
-import { Video } from 'expo-av';
 
-import { AbortController } from 'native-abort-controller'
 import * as SecureStore from 'expo-secure-store';
 import * as FileSystem from 'expo-file-system';
-import * as Progress from 'react-native-progress'
 
 // API
-import getPostCategoryByVidID from '../../../actions/database/getPostCategoryByVidID';
 import getPostContentByID from '../../../actions/database/getPostContentByID';
+import getAllCategories from '../../../actions/database/getAllCategories';
+import savePausedVideo from '../../../actions/save/savePausedVideo';
+import getPausedVideo from '../../../actions/save/getPausedVideo';
+import saveVideos from '../../../actions/save/saveVideos';
+import removeSavedVideoByTitle from '../../../actions/save/removeSavedVideoByTitle';
+import getSavedPostByTitle from '../../../actions/save/getSavedPostByTitle';
+import removeSavedVideos from '../../../actions/save/removeSavedVideos';
 
 import useFetch from '../../../hooks/useFetch';
 
 // Icons
 import { Ionicons } from '@expo/vector-icons';
 import { colors, customStyle, width, shadow } from '../../../constants/theme';
-import CategoryScroll from '../../components/shared/Categories/CategoryScroll';
 import { SmallButton } from '../../components/shared/Button';
 
-import PostContent from '../../components/shared/Posts/PostContent';
-import saveVideos from '../../../actions/save/saveVideos';
-import deleteSavedVideoByTitle from '../../../actions/save/deleteSavedVideoByTitle';
-import getSavedVideoByTitle from '../../../actions/save/getSavedVideoByTitle';
-import deleteSavedVideos from '../../../actions/save/deleteSavedVideos';
 import {  BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
-
-
+import BottomTabView from './Tabs/BottomTabView';
+import CategoryItem from '../../components/shared/Categories/CategoryItem';
 
 export default function SinglePost( {route, navigation} ) {
-    const controller = new AbortController()
-    const signal = controller.signal
-
-    signal.addEventListener('abort', () => {
-        console.log('aborted!')
-    })
-    
-    const [ refresh, setRefresh ] = useState(false);
+  const [ refresh, setRefresh ] = useState(false);
     const [ fetchPost, setFetchPost] = useState(false)
-    const onRefresh = React.useCallback(() => {
+
+    // onRefresh function used by scrollview
+    // toggles page loading states
+    const onRefresh = useCallback(() => {
         setRefresh(true);
         setFetchPost(true)
     }, []);
 
-    // Tabs Flat List functions
-    const ref = React.useRef<FlatList>(null);
-    const [ selected, setSelected ] = useState(0);
-
-    const onScroll = ({ nativeEvent }) => {
-        const index = Math.round(nativeEvent.contentOffset.x / (width - 20))
-        
-        setSelected(index)
-
-    }
-    const tapScroll = ( i:number ) => {
-        setSelected(i)
-        ref.current?.scrollToIndex({
-            index: i,
-            animated: true,
-        })
-    }
-
     // API functions
     const { post } = route.params 
     const { data: postContent, isLoading: isPostContentLoading, error: postContentError, refetch: postContentRefetch } = useFetch(getPostContentByID, post.post_content_id)
-    const { data: postCategories, isLoading: isPostCategoriesLoading, error: postCategoriesError, refetch: postCategoriesRefetch } = useFetch(getPostCategoryByVidID, post.id)
+    const { data: categories, isLoading: isCategoriesLoading, error: categoriesError, refetch: categoriesRefetch } = useFetch(getAllCategories, '*')
     
+    // filter for postCategories
+    // takes categories found from API call, and checks if it matches the current post's category id
+    // if yes, store in variable to be used by flatlist displaying category items
+    const postCategories = new Array
+    const filterCategories = (categories, post) => {
+        try {
+          categories.map(category => {
+            if (category.id === post.category_id) {
+                postCategories.push(category)
+            }    
+          })
+        } catch (error){
+          console.log(error.message)
+    
+        } finally {
+          
+        }  
+    }
+    filterCategories(categories, post)
+
+    // declares local states for saved psots
     const [ useLocalFile, setUseLocalFile ] = useState(false)
     const [ pausedDownload, setPausedDownload ] = useState({})
     
-    const [ errorModalVisible, setErrorModalVisible ] = useState(false)
+    // declares state for modal visibilty
+    // sets object called options for different video download states
     const [ modalVisible, setModalVisible ] = useState(false)
     const options = {
         'Download': ['Pause', 'Cancel'],
@@ -80,26 +77,42 @@ export default function SinglePost( {route, navigation} ) {
     // Bottom Sheet Variables
     const snapPoints = useMemo(() => ['35%'], []);
 
-    useEffect(() => {
-        async function getSavedPost() {
-            // previously paused download
-            const title = post.title.replaceAll(' ', '').toLowerCase()
-            const downloadSnapshotJson = await SecureStore.getItemAsync(title);
+    // ascynchronous function checking for locally saved posts
+    // checks api function getPausedVideo to see if there are any paused states saved locally in the encrypted storage
+    // uses title formatted as lower case string with no symbols and spaces as storage key
+    // if the result returned is usable, construct the string back into an object
+    // if the constructed object is usable, set local state pausedDownload to the contents of the object then set component download state to paused
+    // then checks if the local encrypted storage has a version of the single post stored
+    // uses title posts as the key
+    // if the result returned is usable, set the component data state to true and change the setAction state to complete
+    // if the result no values are returned or the result is not usable, set the component state to false and change setAction to Can download
+    // actions are used to change the download button states and the bottom sheet modal content
+    async function getSavedPost() {
+        // previously paused download
+        const title = post.title.replaceAll(' ', '').toLowerCase()
+        const downloadSnapshotJson = await getPausedVideo(title);
+        if (downloadSnapshotJson !== null && downloadSnapshotJson !== undefined && downloadSnapshotJson.length > 0 ) {
             const downloadSnapshot = JSON.parse(downloadSnapshotJson);
             if (downloadSnapshot !== null) {
                 setPausedDownload(downloadSnapshot)
                 setAction('Pause')
             }
-            const result = await getSavedVideoByTitle('posts', post.title)
-            if (result.length > 0 && typeof result !== undefined && result !== null ) {
-                    
-                setUseLocalFile(true)
-                setAction('Complete')
-            } else {
-                setUseLocalFile(false)
-                setAction('Can download')
-            }
         }
+        const result = await getSavedPostByTitle('posts', post.title)
+        if (result.length > 0 && typeof result !== undefined && result !== null ) {
+            setUseLocalFile(true)
+            setAction('Complete')
+        } else {
+            setUseLocalFile(false)
+            setAction('Can download')
+        }
+    }
+    // function runs everytime fetchpost state is changed
+    // sets post variable to original values
+    // calls get saved post to see if there an any values saved
+    // refetches new content for post, categories
+    // refilters categories
+    useEffect(() => {
         if (fetchPost === true) {
             try {
                 post.author = route.params.post.author
@@ -110,7 +123,6 @@ export default function SinglePost( {route, navigation} ) {
                 post.post_content_id = route.params.post.post_content_id
                 post.title = route.params.post.title
                 post.tags = route.params.post.tags
-                console.log(post)
             } catch (error) {
                 setError(error.message)
                 console.log(error.message)
@@ -120,25 +132,13 @@ export default function SinglePost( {route, navigation} ) {
             }
         }
         getSavedPost()
+        postContentRefetch()
+        categoriesRefetch()
+        filterCategories(categories, post)
     }, [fetchPost])
-    
-    const video = React.useRef(null)
-
-    // Set values for tabs
-    const tabs = ['Anatomy', 'Procedures', 'Tips'];
-    const tabContent = [postContent.anatomy, postContent.procedures, postContent.tips]
-
-    // Video Play handler
-    const [ isVideoLoading, setIsVideoLoading ] = useState(false)
-    function handleVideo() {
-        setIsVideoLoading(true)
-    }
 
     // Video Download handler
     const [ action, setAction ] = useState('Can download')
-    const [ videoDownloadProgress, setVideoDownloadProgress ] = useState(0);
-    const [ currentVideoSize, setCurrentVideoSize ] = useState(0);
-    const [ maxVideoSize, setMaxVideoSize ] = useState(0);
     const [ error, setError ] = useState('');
 
     // create private id number for video download
@@ -146,6 +146,8 @@ export default function SinglePost( {route, navigation} ) {
     const videoDir = FileSystem.documentDirectory + 'videos/';
     const videoURL = post.video_path
 
+    // checks if the video directory to be used is found on the device
+    // if there is no directory, create one
     const ensureDirExists = async ( videoDir ) => {
         const dirInfo = await FileSystem.getInfoAsync(videoDir);
         if (!dirInfo.exists) {
@@ -153,12 +155,14 @@ export default function SinglePost( {route, navigation} ) {
           await FileSystem.makeDirectoryAsync(videoDir, { intermediates: true });
         }
     };
+    // callback to get downloadprogress as bytes
     const callback = downloadProgress => {
         const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
-        setVideoDownloadProgress(progress);
-        setCurrentVideoSize(Math.round(downloadProgress.totalBytesWritten / 1000000));
-        setMaxVideoSize(Math.round(downloadProgress.totalBytesExpectedToWrite / 1000000));
     };
+    // creates an isntance of downloadresumable to be used by componnent.
+    // set the values for videourl to be downloaded, and the video file path to download to
+    // no options required
+    // passes the download progress callback
     const downloadResumable = useRef(FileSystem.createDownloadResumable(
         videoURL,
         videoDir + `${video_id}.mp4`,
@@ -166,14 +170,22 @@ export default function SinglePost( {route, navigation} ) {
         callback
     ));
 
+    // function that handles all download actions
+    // takes in the action that is current and the params of the current post
     function handleDownload( action, post ) { 
         console.log(action)
 
-        const savePost = async (uri, params, video_id, maxVideoSize) => {
+        // saves post to local encrypted storage
+        // takes in the downloaded video file path, the current post, postCategories, postContent, video_id and size of the downloaded video
+        // saves to local storage with key 'posts'
+        // checks if the value has been saved correctly
+        // if the result returned is usable then set the action to complete and use the local file for video path
+        // if any errors log the, to console and set action to failed
+        const savePost = async (uri, post, postCategories, postContent, video_id, maxVideoSize) => {
             try {
-                await saveVideos('posts', video_id, params.title, uri, params.video_path, params.image_path, maxVideoSize )
+                await saveVideos('posts', video_id, post, postCategories, postContent, uri, maxVideoSize )
                 setAction('Complete')
-                const result = await getSavedVideoByTitle('posts', params.title)
+                const result = await getSavedPostByTitle('posts', post.title)
                 console.log(result)
                 
                 if ( result.length > 0 && typeof result !== "undefined" && result !== null) {
@@ -184,14 +196,20 @@ export default function SinglePost( {route, navigation} ) {
             } catch (error) {
                 setAction('Failed')
                 setError(error)
-                setErrorModalVisible(true)
                 console.error('Video could not save')
                 console.error(error.message);
             }
         }
+
+        // removes the download passed through the function
+        // call apis for getSavedPostByTitle passing in the download title and 'posts' as key
+        // if the result is the download to be removed then remove any paused states found
+        // then remove the post from the local encrypted storage
+        // set action state to delete and change local file state back to false
+        // checks again if the download has been removed
         const removeDownload = async ( params ) => {
             try {
-                const currentVideo = await getSavedVideoByTitle('posts', params.title)
+                const currentVideo = await getSavedPostByTitle('posts', params.title)
                 console.log(currentVideo)
                 console.log('currentVideo')
                 
@@ -202,7 +220,7 @@ export default function SinglePost( {route, navigation} ) {
                         const title = params.title.replaceAll(' ', '').toLowerCase()
                         await SecureStore.deleteItemAsync(title)
                         
-                        await deleteSavedVideoByTitle('posts', params.title)
+                        await removeSavedVideoByTitle('posts', params.title)
 
                         setAction('Deleted')
                         setUseLocalFile(false)
@@ -231,62 +249,90 @@ export default function SinglePost( {route, navigation} ) {
             } catch(error) {
                 setAction('Failed')
                 console.error(error.message)
-                setError(error.message)
-                setErrorModalVisible(true)
+                Alert.alert(
+                    'Something went wrong', 
+                    'An unknown remove error has occured',
+                    [{
+                        text:'Try again',
+                        onPress:(() => removeDownload(params))
+                    }]
+                )
             } finally {
                 setRefresh(false)
             }
         }
+
+        // downloads the video passed through the argument
+        // checks if there is a usable video path in the params
+        // if the video path found is a local file then set the localfile state to true
+        // else download the video and set the bottom sheet modal visibility to true
+        // checks if for active video directory
+        // downloads the video to the directory and store result into variable
+        // if the result is usable then call savePost function and pass the parameters
+        // setAction state to Cannot download
         const downloadVideo = async ( params ) => {
-            console.log(params)
-            if ( params.video_path === undefined || params.video_path === null || params === null ) {
-                console.log('Cannot find file path to download.')
-            } else if ( params.video_path.startsWith('file://') && downloadResumable.current.fileUri.startsWith('file://')) {
-                setErrorModalVisible(true)
-                setUseLocalFile(true)
-                setError('Local download found.')
-                console.log('Local download found.')
-            } else {
-                setAction('Downloading')
-                setModalVisible(true)
-                try{
-                    await ensureDirExists( videoDir );
-                    const result = await downloadResumable.current.downloadAsync();
-                    console.log('result')
-                    console.log(result)
-                    console.log("Download complete: ", params.id)
-                    savePost(result.uri, params, video_id, result.headers["content-length"])
-                    setAction('Cannot download')
-
-                } catch(error) {
-                    setAction('Failed')
-                    setError(error)
-                    setErrorModalVisible(true)
-                    console.error(error.message)
+            try {
+                console.log(params)
+                if ( params.video_path === undefined || params.video_path === null || params === null ) {
+                    console.log('Cannot find file path to download.')
+                    setError('Video cannot be downloaded.')
+                } else if ( params.video_path.startsWith('file://') && downloadResumable.current.fileUri.startsWith('file://')) {
+                    setUseLocalFile(true)
+                    setError('Local download found.')
+                    console.log('Local download found.')
+                } else {
+                    setAction('Downloading')
+                    setModalVisible(true)
+                    try{
+                        await ensureDirExists( videoDir );
+                        const result = await downloadResumable.current.downloadAsync();
+                        if ( result !== null && result !== undefined) {
+                            console.log("Download complete: ", params.id)
+                            savePost(result.uri, params, postCategories, postContent, video_id, result.headers["Content-Length"])
+                            setAction('Cannot download')
+                        }
+                    } catch(error) {
+                        setAction('Failed')
+                        setError(error)
+                        console.error(error.message)
+                    }
                 }
+            } catch (err) {
+                console.log(err.message)
+                Alert.alert(
+                    'Something went wrong',
+                    'There has been an unknown download error',
+                    [{
+                        text:'Try again',
+                        onPress:(() => downloadVideo(params))
+                    }]
+                )
             }
-
         }
+
+        // pauses download state
+        // stores paused download state to local storage with the formatted title as key
         const pauseDownload = async ( params ) => {
+            console.log(action)
             try {
                 downloadResumable.current.pauseAsync();
                 console.log("Download paused: ", params.id)
                 const title = params.title.replaceAll(' ', '').toLowerCase()
-                await SecureStore.setItemAsync(title, JSON.stringify(downloadResumable.current.savable()));
+                await savePausedVideo(title, downloadResumable.current.savable() )
             } catch (error) {
                 setError(error)
-                setErrorModalVisible(true)
                 onRefresh()
                 console.error(error.message)
                 console.log(action)
                 setAction('Failed')
-            } finally {
             }
         }
+        // resumes download
+        // takes the paused state and resumes it
+        // when completed call savePost function
         const resumeDownload = async ( params ) => {
             try {
-                
-                console.log("Download resuming: ", params.id)
+                getSavedPost()
                 const downloadResumable = new FileSystem.DownloadResumable(
                     pausedDownload.url,
                     pausedDownload.fileUri,
@@ -295,16 +341,17 @@ export default function SinglePost( {route, navigation} ) {
                     pausedDownload.resumeData
                 );
                 setAction('Downloading')
-                const { uri } = await downloadResumable.resumeAsync();
-                savePost(uri, params, video_id, maxVideoSize)
+                const result = await downloadResumable.resumeAsync();
+                savePost(result.uri, params, postCategories, postContent, video_id, result.headers["Content-Length"])
 
             } catch (error) {
                 setAction('Failed')
                 setError(error)
-                setErrorModalVisible(true)
                 console.error(error.message)
             }
         }
+
+        // cancel download
         const cancelDownload = async ( params ) => {
             try {
                 downloadResumable.current.pauseAsync();
@@ -317,6 +364,9 @@ export default function SinglePost( {route, navigation} ) {
                 setAction('Cancelled')
             }
         }
+
+        // checks if the current post data is usable
+        // calls function based on respective action found
         if ( post !== 'null' && post !== 'undefined') {
             if (action === 'Pause') { 
                 pauseDownload(post)
@@ -334,18 +384,18 @@ export default function SinglePost( {route, navigation} ) {
     }
 
     async function deleteSavedVideo() {
-        const results = await deleteSavedVideoByTitle('posts', 'text')
+        const results = await removeSavedVideoByTitle('posts', 'text')
         console.log(results)
     }
     async function deleteSavedVideose() {
-        const results = await deleteSavedVideos('posts')
+        const results = await removeSavedVideos('posts')
         console.log(results)
     }
 
 
-    //ref
+    // creates local instance of bottomsheet
     const bottomSheetModalRef = useRef<BottomSheetModal>(null);
-    // callbacks
+    // handles modal visibility
     const handlePresentModalPress = useCallback(() => {
         setModalVisible(true)
         bottomSheetModalRef.current?.present();
@@ -354,11 +404,14 @@ export default function SinglePost( {route, navigation} ) {
         setModalVisible(false)
         bottomSheetModalRef.current?.dismiss();
     }, []);
-
+    
     return (
+        // renders different views based on loading states, usable data and modal visibilitys
     <>
         <View className="relative flex-1 h-full pb-5 bg-nhs-white">
-            <ScrollView className="flex-1"
+            <ScrollView 
+                nestedScrollEnabled
+                className="flex-1"
                 refreshControl={<RefreshControl refreshing={refresh} onRefresh={onRefresh} />}
             >
                 {/* Status Bar */}
@@ -372,121 +425,79 @@ export default function SinglePost( {route, navigation} ) {
                     </View>          
                 </View>
 
-                        {isPostContentLoading ? (                  
-                        <View className="h-full justify-center items-center">
-                            <ActivityIndicator size='large' color="black" />
+                <View className="flex-1">
+                    <View className="w-full h-[350px] justify-center items-center">
+                        <View className="flex-1 w-full h-full bg-nhs-pale-grey">
+                            <View className="flex-1 bg-black">                                
+                                <Image
+                                source={{uri: post.image_path}}
+                                style={{
+                                    width: '110%',
+                                    height: '100%'
+                                }}
+                                contentFit='cover'
+                                />
+                                <View className="absolute bg-black opacity-40 h-full w-full"/>
+                            </View>
                         </View>
-                        ) : postContentError ? (
-                            <>
-                                <Text>Something went wrong</Text>
-                            </>
-                        ) : typeof postContent !== "undefined" && postContent !== null && postContent.length !== null && Object.hasOwn(postContent, 'id') ? (
-                            <>                             
-
-                            {isVideoLoading ? (
-                                <>
-                                    <Video 
-                                        ref={video}
-                                        style={{ width: width, aspectRatio: 16/9}}
-                                        isLooping
-                                        shouldPlay
-                                        useNativeControls
-                                        source={{uri: post.video_path}}
-                                    />
-                                    {/* <Video post={post} /> */}
-                                </>
-                            ) : (
-                                <View className="flex-1">
-                                    <View className="w-full h-[350px] justify-center items-center">
-                                        <View className="flex-1 w-full h-full bg-nhs-pale-grey">
-                                            <View className="flex-1 bg-black">
-                                            
-                                                <Image
-                                                source={{uri: post.image_path}}
-                                                style={{
-                                                    width: '110%',
-                                                    height: '100%'
-                                                }}
-                                                contentFit='cover'
-                                                />
-                                                <View className="absolute bg-black opacity-40 h-full w-full"/>
-                                            </View>
+                    </View>
+                </View>                    
+                <View className="flex-1 mx-5 my-3">
+                    <View className="pr-5">
+                        <Text style={customStyle.h2}>{post.title}</Text>
+                    </View>
+                    <View className="flex-row mt-3">
+                        <View className="w-full items-start">
+                            <FlatList
+                                horizontal
+                                showsHorizontalScrollIndicator
+                                decelerationRate={'fast'}
+                                data={postCategories}
+                                keyExtractor={item => item.id}
+                                renderItem={({item, index}) => {
+                                    return (
+                                    <>
+                                        <View  key={index} className="mr-3">
+                                            <CategoryItem data={item} index={index}/>
                                         </View>
-                                    </View>
-                                </View>
-                            )}
-
-                            <View className={`flex-1 mx-5 my-3`}>
-                                <View className="">
-                                    <Text style={customStyle.h2}>{post.title}</Text>
-                                </View>
-                                <View className="flex-row mt-3">
-                                    <CategoryScroll categoryData={{ postCategories, postCategoriesError, isPostCategoriesLoading, postCategoriesRefetch }}/>
-                                </View>
-                                <View className="flex-row w-full items-center justify-center gap-2 mt-3">
-                                    <TouchableOpacity  onPress={() => handleVideo()} className="w-1/3">
-                                        <SmallButton text="Play" textColor='white' color='light-green' icon='play-circle' />
-                                    </TouchableOpacity>
-                                    {( action !== 'Cannot download' && action === "Can download" && !useLocalFile ) || action === '' || !useLocalFile || action === 'Deleted' ? (
-                                        <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-2/3">
-                                            <SmallButton text="Download" textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon='download-outline' />
-                                        </TouchableOpacity>
-                                    ) : (
-                                        <View className="w-2/3">
-                                            <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-full">
-                                                <SmallButton text={action === 'Download' && !useLocalFile ? 'Pause' : action === 'Pause' ? 'Resume' : action === 'Complete' ? 'Downloaded' : action === 'Downloading' ? 'Downloading' : useLocalFile ? 'Downloaded' : 'error'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon={action === 'Complete' || useLocalFile && action ==='Download' ? 'md-checkbox-outline' : useLocalFile ? 'md-checkbox-outline' :'download-outline' } />
-                                            </TouchableOpacity>                                          
-                                        </View>                                        
-                                    )}                                    
-                                </View>
-                            </View>
-                            <View className="flex-1 mx-5 my-3">
-                                <View className="w-full h-full">
-                                    <View className="flex-row justify-between items-center w-full">
-                                        {tabs.map((e, i) => (
-                                            <Pressable key={i} className="w-1/3 flex-col" onPress={() => tapScroll(i)}>
-                                                <View className="w-full items-center mb-1">
-                                                    <Animated.Text
-                                                        style={[
-                                                        customStyle.h3,
-                                                        selected == i && {color: colors.lightGreen},
-                                                        ]}>
-                                                        {e}
-                                                    </Animated.Text>
-                                                </View>
-                                                {selected == i ? <View className="bg-nhs-light-green mt-1 py-[1.2px] rounded-full" /> : <View className="bg-nhs-pale-grey mt-1 py-[1.2px] rounded-full"></View>}
-                                                
-                                            </Pressable>
-                                        ))}
-                                    </View>
-                                    <FlatList
-                                        ref={ref}
-                                        data={tabContent}
-                                        snapToAlignment='center'
-                                        decelerationRate="fast"
-                                        horizontal
-                                        showsHorizontalScrollIndicator={false}
-                                        pagingEnabled     
-                                        bounces={false}
-                                        onScroll={onScroll}
-                                        renderItem={({ item, index }) => {
-                                            return (
-                                                <>
-                                                <View key={index} className="mt-4 mx-5" style={{ width: width - 80}}>
-                                                    <PostContent content={item}/>
-                                                </View>
-                                        </>
-                                            )
-                                        }}
-                                    />
-                                </View>
-                            </View>
-                            </>
+                                    </>
+                                    )
+                                }}
+                            />
+                        </View>
+                    </View>
+                    <View className="flex-row w-full items-center justify-center gap-2 px-2 mt-3">
+                        <TouchableOpacity  onPress={() => navigation.navigate("VideoPlayer", { post: post })} className="w-1/3">
+                            <SmallButton text="Play" textColor='white' color='light-green' icon='play-circle' />
+                        </TouchableOpacity>
+                        {( action !== 'Cannot download' && action === "Can download" && !useLocalFile ) || action === '' || !useLocalFile || action === 'Deleted' ? (
+                            <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-2/3">
+                                <SmallButton text="Download" textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon='download-outline' />
+                            </TouchableOpacity>
                         ) : (
-                            <>                            
-                                <Text>No data available</Text>
-                            </>
-                        )}
+                            <View className="w-2/3">
+                                <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-full">
+                                    <SmallButton text={action === 'Download' && !useLocalFile ? 'Pause' : action === 'Pause' ? 'Resume' : action === 'Complete' ? 'Downloaded' : action === 'Downloading' ? 'Downloading' : useLocalFile ? 'Downloaded' : 'error'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon={action === 'Complete' || useLocalFile && action ==='Download' ? 'md-checkbox-outline' : useLocalFile ? 'md-checkbox-outline' :'download-outline' } />
+                                </TouchableOpacity>                                          
+                            </View>                                        
+                        )}                                    
+                    </View>
+                    {isPostContentLoading ? (
+                    <View className="h-full justify-center items-center">
+                        <ActivityIndicator size='large' color="black" />
+                    </View>
+                    ) : postContentError ? (
+                        <>
+                            <Text>Something went wrong</Text>
+                        </>
+                    ) : (
+                        <>                            
+                            <View className="bg-nhs-white px-5">
+                                <BottomTabView tabContent={postContent} />
+                            </View>
+                        </>
+                    )}
+                </View>
             </ScrollView>
             { modalVisible ? (
                 <>
@@ -516,7 +527,7 @@ export default function SinglePost( {route, navigation} ) {
                                         <TouchableOpacity onPress={() => {handleDownload('Remove', post)}} className="w-1/2">
                                             <SmallButton text="Remove" textColor='white' color='red' />
                                         </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'}); }} className="w-1/2">
+                                        <TouchableOpacity onPress={() => {navigation.navigate('Home' , { screen: 'Library Tab'}); }} className="w-1/2">
                                             <SmallButton text="Go to Library" textColor='white' color='light-green' />
                                         </TouchableOpacity>
                                     </View>
@@ -535,25 +546,16 @@ export default function SinglePost( {route, navigation} ) {
                                     <TouchableOpacity onPress={() => {handleDownload('Download', post)}} className="w-1/2">
                                             <SmallButton text="Download" textColor='white' color='light-green' />
                                         </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'})}} className="w-1/2">
+                                        <TouchableOpacity onPress={() => {navigation.navigate('Home' , { screen: 'Library Tab'})}} className="w-1/2">
                                             <SmallButton text="Go to Library" textColor='white' color='light-green' />
                                         </TouchableOpacity>
                                     </View>
                                 </View>
-                            ) : action === 'Downloading' || action ==='Pause' ? (
+                            ) : action === 'Downloading' ? (
                                 <View className="w-full mx-3">
                                     <View className="w-full my-4 justify-center items-center">
-                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl">Download</Text>
+                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl">Downloading</Text>
                                         <Text className="text-nhs-black text-md text-center">{post.title} is still downloading... Please wait or hide the process</Text>
-                                    </View>
-                                    <View className="w-full justify-center items-center my-6">
-                                        <View className="flex-row w-full justify-between items-center">
-                                            <Text className="text-lg font-bold">{currentVideoSize} / {maxVideoSize} MB</Text>
-                                            <Text className="text-lg font-bold">{Math.round(videoDownloadProgress * 100)}%</Text>
-                                        </View>
-                                        <View className="w-full">
-                                            <Progress.Bar progress={Math.round(videoDownloadProgress * 100)} width={null} />
-                                        </View>
                                     </View>
                                     <View className="w-full flex-row gap-2">
                                     {options.Download.map((option, i) => (
@@ -562,20 +564,25 @@ export default function SinglePost( {route, navigation} ) {
                                         </TouchableOpacity>))}
                                     </View>
                                 </View>
+                            ) : action === 'Pause' ? (
+                                <View className="w-full mx-3">
+                                    <View className="w-full my-4 justify-center items-center">
+                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl mb-1">Paused</Text>
+                                        <Text className="text-nhs-black text-md text-center">{post.title} download has been paused. Resume the download or hide the process.</Text>
+                                    </View>
+                                    <View className="w-full gap-2 flex-row">
+                                        {options.Pause.map((option, i) => (
+                                            <TouchableOpacity onPress={() => {handleDownload(option, post)}} key={i} className={`w-1/2 px-4 py-2 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
+                                                <Text className="text-nhs-white font-bold tracking-wide text-lg">{option}</Text>
+                                            </TouchableOpacity>))}
+                                    </View>
+                                    
+                                </View>
                             ) : action === 'Resume' ? (
                                 <View className="w-full mx-3">
                                     <View className="w-full my-4 justify-center items-center">
-                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl mb-1">Download</Text>
+                                        <Text className="text-nhs-light-green font-bold tracking-wide text-2xl mb-1">Downloading</Text>
                                         <Text className="text-nhs-black text-md text-center">{post.title} is still downloading... Please wait or hide the process</Text>
-                                    </View>
-                                    <View className="w-full justify-center items-center my-6">
-                                        <View className="flex-row w-[85%] justify-between items-center">
-                                            <Text className="text-lg font-bold">{currentVideoSize} / {maxVideoSize} MB</Text>
-                                            <Text className="text-lg font-bold">{Math.round(videoDownloadProgress * 100)}%</Text>
-                                        </View>
-                                        <View className="w-full">
-                                            <Progress.Bar progress={Math.round(videoDownloadProgress * 100)} width={null} />
-                                        </View>
                                     </View>
                                     <View className="w-full gap-2 flex-row">
                                         {options.Resume.map((option, i) => (
@@ -595,7 +602,7 @@ export default function SinglePost( {route, navigation} ) {
                                         <TouchableOpacity onPress={() => {handleDownload('Remove', post)}} className="w-1/2">
                                             <SmallButton text="Remove" textColor='white' color='red' />
                                         </TouchableOpacity>
-                                        <TouchableOpacity onPress={() => {navigation.navigate('home' , { screen: 'librarytab'}); setModalVisible(false)}} className="w-1/2">
+                                        <TouchableOpacity onPress={() => {navigation.navigate('Home' , { screen: 'Library Tab'}); setModalVisible(false)}} className="w-1/2">
                                             <SmallButton text="Go to Library" textColor='white' color='light-green' />
                                         </TouchableOpacity>
                                     </View>
@@ -608,10 +615,7 @@ export default function SinglePost( {route, navigation} ) {
                     </View>
                 </BottomSheetModal>
                 </View>
-
-            </BottomSheetModalProvider>
-
-            
+            </BottomSheetModalProvider>           
         </View>
     </>
   )

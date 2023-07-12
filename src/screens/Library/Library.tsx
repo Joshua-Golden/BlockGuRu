@@ -1,86 +1,183 @@
-import { View, Text, SafeAreaView, ScrollView, FlatList, TouchableOpacity, Pressable, RefreshControl, StatusBar } from 'react-native'
-import React, { useEffect, useState } from 'react'
+import { View, Text, SafeAreaView, ScrollView, FlatList, TouchableOpacity, Pressable, RefreshControl, StatusBar, Alert } from 'react-native'
+import React, { useCallback, useEffect, useState } from 'react'
 
+// APIs
+import removeSavedPost from '../../../actions/save/removeSavedPost';
 import getSavedVideos from '../../../actions/save/getSavedVideos';
-import LibraryCard from '../../components/shared/Library/LibraryCard';
-import deleteSavedVideoByID from '../../../actions/save/deleteSavedVideoByID';
-import deleteSavedVideos from '../../../actions/save/deleteSavedVideos';
+import removeSavedVideoByID from '../../../actions/save/removeSavedVideoByID';
+import removeSavedVideos from '../../../actions/save/removeSavedVideos';
 
-import SecureStore from 'expo-secure-store'
+// Modules
+import * as Network from 'expo-network';
+import * as SecureStore from 'expo-secure-store'
 import { Image } from 'expo-image';
+
+// Assets and Components
 import empty from '../../assets/empty.jpg';
-import { customStyle, device } from '../../../constants/theme';
+import LibraryCard from '../../components/shared/Library/LibraryCard';
+import PageHeader from '../../components/PageHeader';
 
 
-export default function Library() {
-  const [ refresh, setRefresh ] = useState(false);
-  const onRefresh = React.useCallback(() => {
-      setRefresh(true);
-      setFetchVideos(true)
-      setRefresh(false);
+export default function Library({ navigation }) {
+  const [ isLoading, setIsLoading ] = useState(false);
+  const [ isOffline, setIsOffline ] = useState(false);
+  const [ savedPostsData, setSavedPostsData ] = useState([]);
 
-    }, []);
-
-  const [ videos, setVideos ] = useState([])
-  const [ fetchVideos, setFetchVideos ] = useState(false)
-  const [ error, setError ] = useState('')
-
-  useEffect(() => {
-    async function getVideos() {
-      try {
-        const results = await getSavedVideos('posts')
-        setVideos(results)
-      } catch (error) {
-        console.log(error.message)
-        setError(error.message)
-      } finally {
-        setFetchVideos(false)
-      }
-    }
-    getVideos()
-    if (fetchVideos === true) {
-      getVideos()
-    }
-
-}, [fetchVideos])
-
-  async function handleDelete(id, title) {
+  // Check if device is connected to the internet
+  // Changes [isOffline] state dependent on the result ( true / false )
+  // While asynchronous function is running, isLoading state is toggled for page loading
+  async function checkNetworkConnection() {
     try {
-      await deleteSavedVideoByID('posts', id)
-      const videoTitle = title.replaceAll(' ', '').toLowerCase()
-      await SecureStore.deleteItemAsync(videoTitle)
+      setIsLoading(true)
+      const network = await Network.getNetworkStateAsync();
+      if ( network.isConnected === true && network.isInternetReachable === true ) {
+        setIsOffline(false)
+      } else {
+        setIsOffline(true)
+      }
+    } catch (error) {
+      console.log(error);
+      Alert.alert(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Checks the encrypted storage system for the key 'termsAccepted'
+  // If true, navigate user to Home page
+  // If false, navigate user to Welcome page to Accept terms
+  // While asynchronous function is running, isLoading state is toggled for page loading
+  async function checkTerms() {
+    try {
+      setIsLoading(true)
+      const termsAccepted = await SecureStore.getItemAsync('termsAccepted');
+      if( termsAccepted === null || termsAccepted === undefined || termsAccepted.length <= 0 ) {
+          await SecureStore.setItemAsync('termsAccepted', 'false');
+          navigation.navigate('Welcome');    
+      } else if ( termsAccepted === 'true' ) { 
+          navigation.navigate('Home');
+      }
+    } catch (error) {
+      console.log(error)
+      Alert.alert(
+          'Something went wrong',
+          error.message,
+          [{
+              text: 'Try Again',
+              onPress: () => checkTerms(),
+          }]
+      )
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
+  // Callback to refresh the page from the ScrollView
+  // If the function is called it checks for a network connection
+  // If there is an active connection, run the API to check for locally saved posts
+  // If no connection, raise an Alert
+  // While function is running, isLoading state is toggled for page loading
+  const onRefresh = useCallback(() => {
+    try {
+      setIsLoading(true);
+      checkNetworkConnection()
+      if (isOffline === false) {
+        savedPosts()
+      }
+    } catch(error) {
+      console.log(error.message)
+      Alert.alert(
+        "Something went wrong",
+        "An unknown network error has occured. ",
+        [{
+          text: "Try Again"
+        }])
+    } finally {
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Asynchronous function to check local storage for saved posts
+  // The result that is returned gets put into a global variable for the component to use
+  // While asynchronous function is running, isLoading state is toggled for page loading
+  async function savedPosts() {
+    console.log('check')
+    try {
+      setIsLoading(true)
+      const results = await getSavedVideos('posts')
+      setSavedPostsData(results)
     } catch (error) {
       console.log(error.message)
-      setError(error.message)
+      Alert.alert(error.message)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+  // Asynchronous function to remove the queried post from local storage
+  // Uses post title as key
+  // The key is saved as a lowercase string with no spaces and symbols
+  // Runs an inline function to format the title correctly then saves  it to variable videoTitle
+  // If there is an error raise an Alert.
+  async function handleDelete(id, title) {
+    console.log(id, title)
+    try {
+      await removeSavedVideoByID('posts', id)
+      const videoTitle = title.replaceAll(' ', '').toLowerCase()
+      await removeSavedPost(videoTitle)
+    } catch (error) {
+      console.log(error.message)
+      Alert.alert(
+        'Something went wrong',
+        "An unknown error has occured",
+        [{
+          text: 'Dismiss',
+        }])
 
     } finally {
       onRefresh()      
     }
   }
 
-  async function deleteSavedVideose() {
-    const results = await deleteSavedVideos('posts')
-    console.log(results)
+  // Function to navigate to the Video Player when called
+  // Takes in the parameter post that is needed for this route 
+  function handlePlay( post ) {
+    try {
+      navigation.navigate( 'VideoPlayer', {post: post} )
+    } catch (error) {
+      console.log(error.message)
+    }
   }
 
-  return (
-    <SafeAreaView className="w-full h-full px-5 bg-nhs-white">
-      <StatusBar barStyle='dark-content' />
+  // Function that runs on every time the page rerenders 
+  // Runs the savedPosts function that checks for locally saved data
+  // Checks network connection to see if there still is an active connection
+  // Also checks the terms to see if they are not set.
+  useEffect(() => {
+    savedPosts()
+    checkNetworkConnection()
+    checkTerms()
+  }, [])
 
-      <View className={`flex-row w-full justify-between items-center p-5 mr-3 ${device.osName === 'iOS' ? '': 'mt-10'}`}>
-        <View className="flex-row justify-start items-center">
-          <Text style={customStyle.h2}>Library</Text>
+  // Component render
+  return (
+    // SafeAreaView ensures that the content inside  of the block will only render inside the Devices viewable screen
+    <SafeAreaView className="flex-1 h-full bg-nhs-white">
+      <ScrollView 
+        className="flex-1"
+        // refresh control that calls the onRefresh function when the user has pulled down from the top of the scrollview
+        refreshControl={<RefreshControl refreshing={isLoading} onRefresh={onRefresh} />}>
+      <View className="px-5 items-center w-full h-full">
+        {/* Page Header  */}
+        <View className="w-full">
+          <PageHeader title='My Library' isBackArrow={false}/>
         </View>
-      </View>
-      <View className="h-full w-full">
-        <ScrollView
-          className="w-full h-full ml-5"
-          contentContainerStyle={{ flex: 1 }}
-          refreshControl={<RefreshControl refreshing={refresh} onRefresh={onRefresh} />}
-        >
-          { videos.length === 0 ? (
-            <View className="h-full justify-center items-center">
-              <View className="justify-center  items-center">
+        <View className="h-full w-full">
+          {/* Checks if there is any saved data in the array 
+            if yes, render the saved data in a flat list
+            if no, render no empty library */}
+          { savedPostsData.length === 0 ? (
+            <View className="h-full items-center">
+              <View className="items-center">
                 <Image 
                   style={{
                       width:300,
@@ -91,24 +188,36 @@ export default function Library() {
                 />
               </View>
               <Text className="text-center text-xl text-nhs-light-green font-bold">Your Library is Empty</Text>
-              <Text className="text-center">Looks like you haven't donwloaded any videos at all.</Text>
-              <Text className="text-center">Maybe try refreshing. Pull down to refresh</Text>
+              <Text className="text-center">Looks like you haven't downloaded any videos at all.</Text>
+              <Text className="text-center">Maybe try pulling down to refresh.</Text>
             </View>
           ) : (
-            <FlatList
-              data={videos}
-              scrollEnabled={false}
-              keyExtractor={(item) => item.id}
-              renderItem={({item, index}) => (
-                <>
-                  <LibraryCard data={item} index={index} handleDelete={() => handleDelete(item.id, item.title)} />  
-                </>
-              )}
-              List
-            />  
-          )}          
-        </ScrollView>            
-      </View>    
+            <View className="w-full items-start">
+              {/* Renders the component LibraryCard to list all current saved posts data */}
+              <FlatList
+                data={savedPostsData}
+                scrollEnabled={false}
+                keyExtractor={(item) => item.id}
+                contentContainerStyle={{
+                  marginVertical:15,
+                }}
+                renderItem={({item, index}) => (
+                  <>
+                    <LibraryCard
+                      key={index}
+                      data={item}
+                      handleDelete={() => handleDelete(item.post.id, item.post.title)} 
+                      handlePlay={() => handlePlay(item)} 
+                    />  
+                  </>
+                )}
+                List
+              />
+            </View>
+          )}
+          </View>      
+        </View>      
+      </ScrollView>
     </SafeAreaView>
   )
 }

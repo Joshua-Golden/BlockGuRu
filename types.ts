@@ -18,6 +18,10 @@ export interface Regions {
     id: BigInt,
     title: string,
 }
+export interface Techniques {
+    id: BigInt,
+    title: string,
+}
 export interface PostCategory {
     id: number[],
     post_id: number[],

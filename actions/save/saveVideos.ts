@@ -1,11 +1,12 @@
-import * as SecureStore from 'expo-secure-store';
+import createSecureStore from '@neverdull-agency/expo-unlimited-secure-store';
 import { SavedVideos } from "../../types";
 import getSavedVideos from './getSavedVideos';
 import filter from 'lodash.filter'
 
+const secureStore = createSecureStore()
 
-const saveVideos = async (key:string, id:number, title:string, uri:string, video_path:string, image_path:string, fileSize:number): Promise<SavedVideos[]> => {
-    var currentVideos = await getSavedVideos('posts')    
+const saveVideos = async (key:string, video_id:number, post:object, postCategories:object, postContent:object, uri:string, fileSize:number): Promise<SavedVideos[]> => {
+    var currentVideos = await getSavedVideos('posts')
     try {
         const contains = (query, { title }) => {
             if (title.toLowerCase().match(query)) {
@@ -13,14 +14,15 @@ const saveVideos = async (key:string, id:number, title:string, uri:string, video
             }
             return true;
         }
-        const formattedQuery = title.toLowerCase();
+        
+        const formattedQuery = post.title.toLowerCase();
         if (currentVideos.length > 0 && currentVideos !== null && currentVideos[0] !== null ) {
             const filteredData = await filter(currentVideos, (current) => {
-                return contains(formattedQuery, current)
+                return contains(formattedQuery, current.post)
             });
             push(filteredData)
         } else {
-            save(id, title, uri, video_path, image_path, fileSize)
+            save(video_id, post, postCategories, postContent, uri, fileSize)
         }
         
     } catch(error) {
@@ -29,13 +31,20 @@ const saveVideos = async (key:string, id:number, title:string, uri:string, video
     }
 
     async function push(filteredData) {
-        const data = { "id": id, "title": title, "uri": uri, "video_path": video_path, 'image_path': image_path, "fileSize": fileSize}
+        const data = { 
+            "video_id": video_id, 
+            "post": post, 
+            "postCategories": postCategories, 
+            "postContent": postContent, 
+            "uri": uri, 
+            "fileSize": fileSize
+        }
         filteredData.push(data)
         console.log(filteredData)
 
         try  {
             console.log('saving post')
-            const savedVideo = await SecureStore.setItemAsync(key, JSON.stringify(filteredData))
+            const savedVideo = secureStore.setItem(key, JSON.stringify(filteredData))
             console.log('Saved post to secure store')
             return ( savedVideo as any ) || [];
 
@@ -43,13 +52,20 @@ const saveVideos = async (key:string, id:number, title:string, uri:string, video
             console.error(error.message)
         } 
     }
-    async function save(id, title, uri, video_path, image_path, fileSize) {
+    async function save(video_id, post, postCategories, postContent, uri, fileSize) {
         const data = new Array
-        data.push({ "id": id, "title": title, "uri": uri, "video_path": video_path, 'image_path':image_path, 'fileSize': fileSize })
+        data.push({ 
+            "video_id": video_id,
+            "post": post,
+            "postCategories": postCategories,
+            "postContent": postContent,
+            "uri": uri,
+            'fileSize': fileSize 
+        })
         console.log(data)
         try  {
             console.log('saving post')
-            const savedVideo = await SecureStore.setItemAsync(key, JSON.stringify(data))
+            const savedVideo = secureStore.setItem(key, JSON.stringify(data))
             console.log('Saved post to secure store')
             return ( savedVideo as any ) || [];
 

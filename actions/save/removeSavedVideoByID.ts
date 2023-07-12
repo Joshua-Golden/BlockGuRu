@@ -1,8 +1,10 @@
-import * as SecureStore from 'expo-secure-store';
+import createSecureStore from '@neverdull-agency/expo-unlimited-secure-store';
 import { SavedVideos } from "../../types";
 import getSavedVideos from './getSavedVideos';
 
-const deleteSavedVideoByTitle = async (key:string, title:string): Promise<SavedVideos[]> => {
+const secureStore = createSecureStore();
+
+const removeSavedVideoByID = async (key:string, id:number): Promise<SavedVideos[]> => {
     if( key ) {        
         try {
             var currentVideos = await getSavedVideos(key)
@@ -11,19 +13,17 @@ const deleteSavedVideoByTitle = async (key:string, title:string): Promise<SavedV
             var isMatch = false
             if ( currentVideos.length > 0 ) {
                 currentVideos.map((current, index) => {
-                    console.log('filtering', current.title,'and', title)
+                    console.log('filtering', current.post.id,'and', id)
                     console.log('at index', index)
-                    if( current.title === title) {
-                        console.log('found matching title')
-                        if ( index === 0 ) {
+                    if( current.post.id === id ) {
+                        console.log('match found')
+                        if (index === 0) {
                             console.log('shifting index', index)
-                            currentVideos.shift()
-                            console.log(currentVideos)
+                            currentVideos.splice(index, 1)
                         } else if (index > 0) {
-                            currentVideos.splice(0, index)
-                            console.log('title removed')
-                            console.log(currentVideos)
-                        }
+                            console.log('splicing index', index)
+                            currentVideos.splice(index, 1)
+                        }                        
                         isMatch = true
                     } else {
                         isMatch = false
@@ -32,10 +32,10 @@ const deleteSavedVideoByTitle = async (key:string, title:string): Promise<SavedV
                 })
             }
             if (isFiltered && isMatch) {
-                await SecureStore.setItemAsync(key, JSON.stringify(currentVideos))
-                console.log('deleted video ' + title)
+                secureStore.setItem(key, JSON.stringify(currentVideos))
+                console.log('deleted video ' + id)
             } else if (!isMatch) {
-                console.log('No title match found to delete.')
+                console.log('No id match found to delete.')
                 console.log('Aborting delete.')
             }
         } catch(error) {
@@ -44,7 +44,10 @@ const deleteSavedVideoByTitle = async (key:string, title:string): Promise<SavedV
     } else {
         console.error("Key value empty.")
     }
+
+    var currentVideos = await getSavedVideos(key)
+    console.log('currentVideos', currentVideos)
     return [];
 }
 
-export default deleteSavedVideoByTitle
+export default removeSavedVideoByID

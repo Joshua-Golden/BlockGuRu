@@ -1,13 +1,12 @@
-import * as SecureStore from 'expo-secure-store';
 import filter from 'lodash.filter'
 import { SavedVideos } from "../../types";
 import getSavedVideos from './getSavedVideos';
 
-const getSavedVideoByTitle = async (key:string, title:string): Promise<SavedVideos[]> => {
+const getSavedPostByTitle = async (key:string, title:string): Promise<SavedVideos[]> => {
     try {
         const result = await getSavedVideos(key)
-        const contains = (title , query) => {           
-            if (title.toLowerCase().match(query)) {
+        const contains = (title , query) => {
+            if (query.post.title.toLowerCase().match(title)) {
                 return true;
             }
             return false;
@@ -23,4 +22,4 @@ const getSavedVideoByTitle = async (key:string, title:string): Promise<SavedVide
     }    
 }
 
-export default getSavedVideoByTitle
+export default getSavedPostByTitle
