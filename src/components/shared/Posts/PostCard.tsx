@@ -5,7 +5,8 @@ import { customStyle, shadow, colors, sizes, spacing, device } from '../../../..
 import { Image } from 'expo-image'
 import { useNavigation } from '@react-navigation/native';
 
-// creates local variables using device width
+// declares local variables to be used in styling
+// takes current device width from theme
 const iPadOS_CARD_WIDTH = sizes.width - 583
 const iPadOS_CARD_HEIGHT = 350
 const iOS_CARD_WIDTH = sizes.width - 218
@@ -13,12 +14,11 @@ const iOS_CARD_HEIGHT = 270
 const Android_CARD_WIDTH = sizes.width - 230
 const Android_CARD_HEIGHT = 270
 
-export default function CategoryCard( { data, index} ) {
+export default function PostCard( { data, index} ) {
   const navigation = useNavigation();
   const post = data
 
   return (
-    // renders different views based on which device operating system is currently found
     <>
     { device.osName === 'iPadOS' ? (
       <>
@@ -129,6 +129,7 @@ export default function CategoryCard( { data, index} ) {
   )
 }
 
+// creates local styling 
 const styles = StyleSheet.create({    
   iPadOS_card: {
     minWidth: iPadOS_CARD_WIDTH,

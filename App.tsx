@@ -4,9 +4,14 @@ import AppNavigation from './navigation/appNavigation';
 
 import { useEffect, useState } from 'react';
 import * as SecureStore from 'expo-secure-store';
+import * as ScreenOrientation from 'expo-screen-orientation'
 
-
+async function lockScreenOrientaiton() {
+  await ScreenOrientation.lockAsync(ScreenOrientation.OrientationLock.PORTRAIT_UP)
+}
 export default function App() {
+  lockScreenOrientaiton()
+
   const [ initialRouteName, setInitialRouteName ] = useState('');
   const [ isLoading, setIsLoading ] = useState(false);
 

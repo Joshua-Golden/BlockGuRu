@@ -70,12 +70,18 @@ export const sizes = {
   h2: 24,
   h3: 18,
   h4: 16,
+  h5: 13,
+  h6: 11,
   p: 14,
   text: 10,
   button: 14,
   body: 14,
   caption: 12,
-  radius: 16,
+  radius_xs: 8,
+  radius_sm: 12,
+  radius_md: 16,
+  radius_lg: 20,
+  radius_xl: 24,
 };
 
 export const spacing = {
@@ -90,7 +96,6 @@ export const customStyle = StyleSheet.create({
         fontSize: sizes.title,
         fontWeight: '800',
         letterSpacing: .3,
-        marginVertical: 5,
         marginHorizontal: 5,
         textAlign: 'center',
     },
@@ -111,6 +116,16 @@ export const customStyle = StyleSheet.create({
     },
     h4: {
         fontSize: sizes.h4,
+        fontWeight: 'bold',
+        letterSpacing: .3
+    },
+    h5: {
+        fontSize: sizes.h5,
+        fontWeight: 'bold',
+        letterSpacing: .3
+    },
+    h6: {
+        fontSize: sizes.h6,
         fontWeight: 'bold',
         letterSpacing: .3
     },

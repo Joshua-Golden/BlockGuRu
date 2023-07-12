@@ -5,20 +5,30 @@ import { customStyle, device } from '../../../constants/theme';
 import { Ionicons} from '@expo/vector-icons'
 import useFetch from '../../../hooks/useFetch';
 import getCategoryByRegionID from '../../../actions/database/getCategoryByRegionID';
-import BlockRegionsCard from '../../components/shared/Categories/BlockRegionsCard';
+import BlockRegionsCard from '../../components/shared/Regions/BlockRegionsCard';
+import PageHeader from '../../components/PageHeader';
 
 export default function SingleRegion({ route, navigation }) {
+  // deconstructs the data that is passed through the component
   const { region } = route.params
+  // passes the function API get all posts to be handled and returned through the useFetch hooks
+  // passes the parameter of * to get every result that is found
   const { data: categories, isLoading: isCategoriesLoading, error: categoriesError, refetch: categoriesRefetch } = useFetch(getCategoryByRegionID, region.id)
 
+  // sets local state variables to be used by the component
   const [ refresh, setRefresh ] = useState(false);
   const [ fetchRegion, setFetchRegion] = useState(false)
+  // onRefresh function to set be used in the scrollview
   const onRefresh = React.useCallback(() => {
       setRefresh(true);
       categoriesRefetch()
       setFetchRegion(true)
   }, []);
 
+  // function that runs everytime the dependency fetchCategory has changed state
+  // function checks if the value of fetchcategory is of boolean true
+  // runs try catch finally block to reset the object parameters to the original values passed
+  // finally toggles the states declared above
   useEffect(() => {
     if (fetchRegion === true) {
         try {
@@ -27,32 +37,20 @@ export default function SingleRegion({ route, navigation }) {
           console.log(region)
         } catch (error) {
             console.log(error.message)
-            Alert.alert(
-              'Something went wrong',
-              error.message,
-              [{
-                text: 'Try again',
-                onPress: () => onRefresh(),
-              }])
         } finally {
           setFetchRegion(false)
-            setRefresh(false);
+          setRefresh(false);
         }
     }
-    
 }, [fetchRegion])
 
-
+// component renderer
   return (
+    // SafeAreaView ensures all children of it are rendered within the devices visiible screen view
     <SafeAreaView className="w-full h-full bg-nhs-white">
-      <StatusBar barStyle='dark-content' />
-      <View className={`flex-row w-full items-center p-5 mr-3 ${device.osName === 'iOS' ? '': 'mt-10'}`}>
-        <TouchableOpacity onPress={() => navigation.goBack()}  className="mr-3">
-          <Ionicons name='arrow-back' color={'black'} size={25}/>
-        </TouchableOpacity>
-        <View className="flex-row justify-start items-center">
-          <Text style={customStyle.h2}>{region.title}</Text>
-        </View>
+      <StatusBar barStyle='dark-content' />      
+      <View className="w-full px-4">
+        <PageHeader title={region.title} isBackArrow />
       </View>
       <View className="h-full w-full flex-1">
         <ScrollView
@@ -72,6 +70,9 @@ export default function SingleRegion({ route, navigation }) {
                     scrollEnabled={false}
                     numColumns={2}
                     keyExtractor={(item) => item.id}
+                    contentContainerStyle={{
+                      marginHorizontal: 15,
+                    }}
                     renderItem={({item, index}) => (
                       <>
                         <BlockRegionsCard data={item} index={index} />

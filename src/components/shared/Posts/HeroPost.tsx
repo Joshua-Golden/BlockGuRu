@@ -9,6 +9,7 @@ export default function HeroPost( { postData } ) {
   const navigation = useNavigation()
   const { posts, isPostsLoading, postError, postsRefetch } = postData
   
+  // only takes the first item found in array
   const post = posts[0]
   
   return (
@@ -22,13 +23,13 @@ export default function HeroPost( { postData } ) {
           }}
           contentFit='cover'
         />
-        <View className="absolute bg-black/50 h-full w-full"/>
+        <View className="absolute bg-black/60 h-full w-full"/>
       </View>
-      <View className="absolute bottom-0 pb-4 px-4 w-full">
+      <View className="absolute bottom-0 pb-4 px-5 pr-[50px] w-full">
         <View className="mb-3 ">
-            <Text className="text-white" style={customStyle.h1}>{post.title}</Text>
+            <Text ellipsizeMode='tail' numberOfLines={2} className="text-white" style={customStyle.h1}>{post.title}</Text>
             <View className="flex-row gap-1">
-              <Text className="capitalize text-white" style={customStyle.p}>{post.tags.join(', ')}</Text>
+              <Text ellipsizeMode='tail' numberOfLines={1} className="capitalize text-white" style={customStyle.p}>{post.tags.join(', ')}</Text>
             </View>
         </View>
         <View className="w-full gap-2 flex-row justify-start items-center">
@@ -36,7 +37,7 @@ export default function HeroPost( { postData } ) {
                 <SmallButton text="Play" borderColor='light-green' textColor='white' color='light-green' icon='play-circle' />
             </TouchableOpacity>
             <TouchableOpacity onPress={() => navigation.navigate('Post', {post: post})}>
-                <SmallButton text="Read More" borderColor='light-green' textColor='light-green' color='white' transparent={true} icon='md-information-circle-sharp' />
+                <SmallButton text="Information" borderColor='light-green' textColor='light-green' color='light-green' transparent={true} icon='md-information-circle-sharp' />
             </TouchableOpacity>
         </View>
 

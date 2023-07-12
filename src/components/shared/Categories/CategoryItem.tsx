@@ -2,7 +2,9 @@ import { View, Text, TouchableOpacity } from 'react-native'
 import { useNavigation } from '@react-navigation/native'
 import React from 'react'
 
-export default function CategoryItem({ data, index }) {
+// component that displays the category title and navigates to single category screen when pressed.
+// found on single post screen
+export default function CategoryItem( {data, index} ) {
     const navigation = useNavigation()
   return (
     <TouchableOpacity 

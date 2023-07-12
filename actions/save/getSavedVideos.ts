@@ -1,9 +1,11 @@
-import * as SecureStore from 'expo-secure-store';
+import createSecureStore from '@neverdull-agency/expo-unlimited-secure-store';
 import { SavedVideos } from "../../types";
+
+const secureStore = createSecureStore()
 
 const getSavedVideos = async (key:string): Promise<SavedVideos[]> => {
     try {
-        const result = await SecureStore.getItemAsync(key)
+        const result = await secureStore.getItem(key)
         if ( result === '[null]' ) {
             console.log('returned nothing')
             return [];

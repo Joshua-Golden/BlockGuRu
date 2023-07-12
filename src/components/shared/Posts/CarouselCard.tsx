@@ -6,9 +6,9 @@ import { Image } from 'expo-image'
 
 import { useNavigation } from '@react-navigation/native';
 
+//
 const CARD_WIDTH = sizes.width - 80;
 const CARD_HEIGHT = 200;
-const CARD_WIDTH_SPACING = CARD_WIDTH + spacing.l;
 
 export default function CarouselCard( { data, index } ) {
   const navigation = useNavigation();
@@ -32,11 +32,11 @@ export default function CarouselCard( { data, index } ) {
           <View className="absolute bg-black opacity-50 h-full w-full"/>
           </View>
           <View style={styles.titleBox}>
-            <Text style={styles.title}>{data.title}</Text>
+            <Text ellipsizeMode='tail' numberOfLines={3} className="text-white pb-2" style={{ fontSize: sizes.h2, fontWeight: 'bold',}}>{data.title}</Text>
             <View className="flex-row gap-1">
-              <Text className="capitalize" style={styles.secondary}>{data.tags.join(', ')}</Text>
+              <Text ellipsizeMode='tail' numberOfLines={1} className="capitalize" style={styles.secondary}>{data.tags.join(', ')}</Text>
             </View>
-            <Text> {data.tag}</Text>
+            <Text>{data.tag}</Text>
           </View>
         </View>
       </TouchableOpacity>

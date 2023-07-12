@@ -1,0 +1,16 @@
+{
+    "expo": {
+      "ios": {
+        "requireFullScreen": true
+      },
+      "plugins": [
+        [
+          "expo-screen-orientation",
+          {
+            "initialOrientation": "PORTAIT_UP"
+          }
+        ]
+      ]
+    }
+  }
+  

@@ -4,16 +4,17 @@ import { useNavigation } from '@react-navigation/native';
 import { customStyle, width, height } from '../../../constants/theme';
 import { Ionicons } from '@expo/vector-icons';
 
-
-interface ButtonProps{
+// ensures all data passed through the component is the correct and amount and of the correct data type
+interface ButtonProps {
     text?: string;
     textColor: string;
     color?: string;
     borderColor?: string;
     transparent?: boolean;
     icon?: string;
-  }
+}
 
+// renders a big button
 export function BigButton({ text, textColor, color, borderColor, icon, transparent }: ButtonProps) {
   return (
   <>
@@ -32,6 +33,7 @@ export function BigButton({ text, textColor, color, borderColor, icon, transpare
   )
 }
 
+// renders a small button
 export function SmallButton({ text, textColor, color, borderColor, icon, transparent }: ButtonProps) {
 
   return (
@@ -40,7 +42,7 @@ export function SmallButton({ text, textColor, color, borderColor, icon, transpa
         {icon 
         ? <>
             <View className={` ${!text ? `mr-0` : `mr-2`}`}>
-                <Ionicons name={icon} color={transparent ? '#78BE20' : 'white'} size={20} />
+                <Ionicons name={icon} color={color === 'white' ? 'white' : transparent ? '#78BE20' : 'white'} size={20} />
             </View>
         </>
         : <></>}
