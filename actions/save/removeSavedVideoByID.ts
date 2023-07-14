@@ -1,52 +1,54 @@
 import createSecureStore from '@neverdull-agency/expo-unlimited-secure-store';
 import { SavedVideos } from "../../types";
 import getSavedVideos from './getSavedVideos';
+import filter from 'lodash.filter'
 
 const secureStore = createSecureStore();
 
 const removeSavedVideoByID = async (key:string, id:number): Promise<SavedVideos[]> => {
-    if( key ) {        
+
+    async function removeQueryFromList(id, currentVideos) {
+        const contains = (query, { id }) => {
+            if (JSON.stringify(id).match(query)) {
+                console.log('removing query from list')
+                return false;
+            }
+            return true;
+        }
+        
+        if (currentVideos.length > 0 && currentVideos !== null && currentVideos[0] !== null ) {
+            const filteredData = await filter(currentVideos, (current) => {
+                return contains(id, current.post)
+            });
+            push(filteredData)
+        } else {
+            console.log('Cannot remove item. There may be nothing removable in saved list.')
+        }
+    }
+    async function push(filteredData) {
+        try  {
+            console.log('saving post without queried item')
+            const savedVideo = secureStore.setItem(key, JSON.stringify(filteredData))
+            console.log('Saved post without queried item to secure store')
+            return ( savedVideo as any ) || [];
+
+        } catch (error) {
+            console.error(error.message)
+        } 
+    }
+
+    if( key ) {  
         try {
             var currentVideos = await getSavedVideos(key)
-            
-            var isFiltered = false
-            var isMatch = false
-            if ( currentVideos.length > 0 ) {
-                currentVideos.map((current, index) => {
-                    console.log('filtering', current.post.id,'and', id)
-                    console.log('at index', index)
-                    if( current.post.id === id ) {
-                        console.log('match found')
-                        if (index === 0) {
-                            console.log('shifting index', index)
-                            currentVideos.splice(index, 1)
-                        } else if (index > 0) {
-                            console.log('splicing index', index)
-                            currentVideos.splice(index, 1)
-                        }                        
-                        isMatch = true
-                    } else {
-                        isMatch = false
-                    }
-                    isFiltered = true
-                })
-            }
-            if (isFiltered && isMatch) {
-                secureStore.setItem(key, JSON.stringify(currentVideos))
-                console.log('deleted video ' + id)
-            } else if (!isMatch) {
-                console.log('No id match found to delete.')
-                console.log('Aborting delete.')
-            }
+            removeQueryFromList(id, currentVideos)
+            const result = await getSavedVideos(key)
+            console.log(result)
         } catch(error) {
             console.error(error.message)
         }
     } else {
         console.error("Key value empty.")
     }
-
-    var currentVideos = await getSavedVideos(key)
-    console.log('currentVideos', currentVideos)
     return [];
 }
 

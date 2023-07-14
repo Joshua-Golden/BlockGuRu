@@ -7,6 +7,7 @@ import { Image } from 'expo-image'
 // Assets
 import QEHBC_Logo from '../../assets/logos/UHB/UHBCharitiesLogo.png'
 import Pajunk_Logo from '../../assets/logos/Pajunk/png/PA_Text.png'
+import UHB_Logo from '../../assets/logos/UHB/uhb2-trans.png';
 
 // function that creates a navigatable link that can be used inside comopnent
 const OpenExternalLink = ({ url, children, styles }) => {
@@ -23,6 +24,10 @@ const OpenExternalLink = ({ url, children, styles }) => {
 }
 
 export default function Acknowledgements() {
+  
+  // gets current year from device
+  const currentyear = new Date().getFullYear()
+
   return (
     <SafeAreaView className="flex-1 px-5 bg-nhs-white">
       <StatusBar style='dark' />
@@ -143,7 +148,25 @@ export default function Acknowledgements() {
                 contentFit='cover'
               />
             </View>
+
+            <Text className="text-lg font-bold">Joshua Golden</Text>
+            <Text className="text-md text-nhs-black">Web Developer</Text>
+            <Text className="text-md text-nhs-black mb-4">StartUp Media UK</Text>
+            
           </View>
+
+          <View className="w-full items-center pb-4">
+            <Text className="text-xl font-bold -mb-1">Block GuRU</Text>
+            <Text className="text-md">Copyright <Text>{'\u00A9'}</Text>{currentyear}</Text>
+            <Image
+                source={UHB_Logo}
+                style={{
+                    width:230,
+                    height:60,
+                }}
+                contentFit='cover'
+            />
+        </View>
         </ScrollView>
       </View>
     </SafeAreaView>

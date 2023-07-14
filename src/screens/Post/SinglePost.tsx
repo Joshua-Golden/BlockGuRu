@@ -19,7 +19,7 @@ import useFetch from '../../../hooks/useFetch';
 
 // Icons
 import { Ionicons } from '@expo/vector-icons';
-import { colors, customStyle, width, shadow } from '../../../constants/theme';
+import { colors, customStyle, width, shadow, device } from '../../../constants/theme';
 import { SmallButton } from '../../components/shared/Button';
 
 import {  BottomSheetModal, BottomSheetModalProvider } from '@gorhom/bottom-sheet';
@@ -64,7 +64,7 @@ export default function SinglePost( {route, navigation} ) {
 
     // declares local states for saved psots
     const [ useLocalFile, setUseLocalFile ] = useState(false)
-    const [ pausedDownload, setPausedDownload ] = useState({})
+    const [ pausedDownload, setPausedDownload ] = useState('')
     
     // declares state for modal visibilty
     // sets object called options for different video download states
@@ -90,19 +90,25 @@ export default function SinglePost( {route, navigation} ) {
     async function getSavedPost() {
         // previously paused download
         const title = post.title.replaceAll(' ', '').toLowerCase()
-        const downloadSnapshotJson = await getPausedVideo(title);
-        if (downloadSnapshotJson !== null && downloadSnapshotJson !== undefined && downloadSnapshotJson.length > 0 ) {
-            const downloadSnapshot = JSON.parse(downloadSnapshotJson);
-            if (downloadSnapshot !== null) {
-                setPausedDownload(downloadSnapshot)
-                setAction('Pause')
-            }
-        }
+        const downloadSnapshot = await getPausedVideo(title);
+        setPausedDownload(downloadSnapshot)
+        console.log(action)
+        // if( action !== 'Failed' && action !== 'Pause' && action !== 'Resume' && action !== 'Download' && action !== 'Downloading' ) {
+        //     if (downloadSnapshot !== null && downloadSnapshot !== undefined && downloadSnapshot.length > 0 ) {
+        //         const downloadSnapshotJSON = JSON.parse(downloadSnapshot);
+        //         if (downloadSnapshotJSON !== null) {
+        //             setPausedDownload(downloadSnapshotJSON)
+        //             setAction('Pause')
+        //         }
+        //     }
+        // }
         const result = await getSavedPostByTitle('posts', post.title)
         if (result.length > 0 && typeof result !== undefined && result !== null ) {
+            console.log('here')
             setUseLocalFile(true)
             setAction('Complete')
-        } else {
+        } else if( action !== 'Pause' && action !== 'Resume' && action !== 'Download' && action !== 'Downloading' ) {
+            console.log('action', action)
             setUseLocalFile(false)
             setAction('Can download')
         }
@@ -159,17 +165,17 @@ export default function SinglePost( {route, navigation} ) {
     const callback = downloadProgress => {
         const progress = downloadProgress.totalBytesWritten / downloadProgress.totalBytesExpectedToWrite;
     };
-    // creates an isntance of downloadresumable to be used by componnent.
+    // creates an instance of downloadresumable to be used by componnent.
     // set the values for videourl to be downloaded, and the video file path to download to
     // no options required
     // passes the download progress callback
+    
     const downloadResumable = useRef(FileSystem.createDownloadResumable(
         videoURL,
         videoDir + `${video_id}.mp4`,
         {},
-        callback
+        callback,
     ));
-
     // function that handles all download actions
     // takes in the action that is current and the params of the current post
     function handleDownload( action, post ) { 
@@ -184,15 +190,13 @@ export default function SinglePost( {route, navigation} ) {
         const savePost = async (uri, post, postCategories, postContent, video_id, maxVideoSize) => {
             try {
                 await saveVideos('posts', video_id, post, postCategories, postContent, uri, maxVideoSize )
-                setAction('Complete')
-                const result = await getSavedPostByTitle('posts', post.title)
-                console.log(result)
-                
+                const result = await getSavedPostByTitle('posts', post.title)                
                 if ( result.length > 0 && typeof result !== "undefined" && result !== null) {
                     post.video_path = result[0].uri
                     setUseLocalFile(true)
-                    setAction('Complete')
                 }
+                setAction('Complete')
+
             } catch (error) {
                 setAction('Failed')
                 setError(error)
@@ -214,9 +218,8 @@ export default function SinglePost( {route, navigation} ) {
                 console.log('currentVideo')
                 
                 if (typeof currentVideo === 'object' && currentVideo.length !> 0) {
-
-                    if ( currentVideo[0].video_path && currentVideo[0].video_path !== null && currentVideo[0].video_path !== undefined && currentVideo[0].video_path !== '' ) {
-                        post.video_path = currentVideo[0].video_path
+                    if ( currentVideo[0].post.video_path && currentVideo[0].post.video_path !== null && currentVideo[0].post.video_path !== undefined && currentVideo[0].post.video_path !== '' ) {
+                        post.video_path = currentVideo[0].post.video_path
                         const title = params.title.replaceAll(' ', '').toLowerCase()
                         await SecureStore.deleteItemAsync(title)
                         
@@ -228,12 +231,10 @@ export default function SinglePost( {route, navigation} ) {
                         // check if post has been deleted
                         const result = await SecureStore.getItemAsync(title)
                         if ( result !== null && result !== undefined && result !== '' && result.length > 0 ) {
-                            console.log(result)
                             if (JSON.parse(result).title === params.title) {
                                 console.log('Delete unsuccessful')
                             }
                         } else {
-                            console.log(result)
                             console.log('Delete successful')
                             setAction('Can download')
                         }
@@ -271,31 +272,41 @@ export default function SinglePost( {route, navigation} ) {
         // if the result is usable then call savePost function and pass the parameters
         // setAction state to Cannot download
         const downloadVideo = async ( params ) => {
+            async function download(params) {
+                setAction('Downloading')
+                setModalVisible(true)
+                try{
+                    await ensureDirExists( videoDir );
+                    const result = await downloadResumable.current.downloadAsync();
+                    if ( result !== null && result !== undefined) {
+                        console.log("Download complete: ", params.id)
+                        savePost(result.uri, params, postCategories, postContent, video_id, result.headers["Content-Length"])
+                        setAction('Cannot download')
+                    }
+                } catch(error) {
+                    setAction('Failed')
+                    setError(error)
+                    console.error(error.message)
+                }
+            }
             try {
-                console.log(params)
-                if ( params.video_path === undefined || params.video_path === null || params === null ) {
-                    console.log('Cannot find file path to download.')
-                    setError('Video cannot be downloaded.')
-                } else if ( params.video_path.startsWith('file://') && downloadResumable.current.fileUri.startsWith('file://')) {
+                if ( params.video_path.startsWith('file://') && downloadResumable.current.fileUri.startsWith('file://')) {
                     setUseLocalFile(true)
                     setError('Local download found.')
                     console.log('Local download found.')
-                } else {
-                    setAction('Downloading')
-                    setModalVisible(true)
-                    try{
-                        await ensureDirExists( videoDir );
-                        const result = await downloadResumable.current.downloadAsync();
-                        if ( result !== null && result !== undefined) {
-                            console.log("Download complete: ", params.id)
-                            savePost(result.uri, params, postCategories, postContent, video_id, result.headers["Content-Length"])
-                            setAction('Cannot download')
+                } else if ( params.video_path === undefined || params.video_path === null || params === null ) {
+                    if( route.params.post.video_path === undefined || route.params.post.video_path === null || route.params.post === null ) {
+                        if (route.params.post.title === params.title) {
+                            params.video_path = route.params.post.video_path
+                            download(params)
+                        } else {
+                            console.log('Cannot find file path to download.')
                         }
-                    } catch(error) {
-                        setAction('Failed')
-                        setError(error)
-                        console.error(error.message)
+                    } else {
+                        download(params)
                     }
+                } else {
+                    download(params)
                 }
             } catch (err) {
                 console.log(err.message)
@@ -313,14 +324,18 @@ export default function SinglePost( {route, navigation} ) {
         // pauses download state
         // stores paused download state to local storage with the formatted title as key
         const pauseDownload = async ( params ) => {
-            console.log(action)
             try {
-                downloadResumable.current.pauseAsync();
+                console.log(downloadResumable)
+                const paused = await downloadResumable.current.pauseAsync();
+                console.log('Paused result', paused)
                 console.log("Download paused: ", params.id)
                 const title = params.title.replaceAll(' ', '').toLowerCase()
-                await savePausedVideo(title, downloadResumable.current.savable() )
+                const savedPauseState = await savePausedVideo(title, downloadResumable.current.savable())
+                console.log('Saved result', savedPauseState)
+                setAction('Pause')
             } catch (error) {
                 setError(error)
+                console.log(error.message)
                 onRefresh()
                 console.error(error.message)
                 console.log(action)
@@ -332,18 +347,13 @@ export default function SinglePost( {route, navigation} ) {
         // when completed call savePost function
         const resumeDownload = async ( params ) => {
             try {
+                setAction('Resume')
                 getSavedPost()
-                const downloadResumable = new FileSystem.DownloadResumable(
-                    pausedDownload.url,
-                    pausedDownload.fileUri,
-                    pausedDownload.options,
-                    callback,
-                    pausedDownload.resumeData
-                );
                 setAction('Downloading')
-                const result = await downloadResumable.resumeAsync();
+                downloadResumable.current.resumeData = pausedDownload
+                console.log(downloadResumable)
+                const result = await downloadResumable.current.resumeAsync();
                 savePost(result.uri, params, postCategories, postContent, video_id, result.headers["Content-Length"])
-
             } catch (error) {
                 setAction('Failed')
                 setError(error)
@@ -354,7 +364,7 @@ export default function SinglePost( {route, navigation} ) {
         // cancel download
         const cancelDownload = async ( params ) => {
             try {
-                downloadResumable.current.pauseAsync();
+                await downloadResumable.current.pauseAsync();
                 console.log("Canceling download: ", params.id)
                 setAction('Cancelled')
             } catch (error) {
@@ -457,9 +467,7 @@ export default function SinglePost( {route, navigation} ) {
                                 renderItem={({item, index}) => {
                                     return (
                                     <>
-                                        <View  key={index} className="mr-3">
-                                            <CategoryItem data={item} index={index}/>
-                                        </View>
+                                        <CategoryItem data={item} index={index}/>
                                     </>
                                     )
                                 }}
@@ -470,14 +478,14 @@ export default function SinglePost( {route, navigation} ) {
                         <TouchableOpacity  onPress={() => navigation.navigate("VideoPlayer", { post: post })} className="w-1/3">
                             <SmallButton text="Play" textColor='white' color='light-green' icon='play-circle' />
                         </TouchableOpacity>
-                        {( action !== 'Cannot download' && action === "Can download" && !useLocalFile ) || action === '' || !useLocalFile || action === 'Deleted' ? (
+                        {( action !== 'Cannot download' && action === "Can download" && !useLocalFile ) || action === 'Deleted' ? (
                             <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-2/3">
                                 <SmallButton text="Download" textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon='download-outline' />
                             </TouchableOpacity>
                         ) : (
                             <View className="w-2/3">
                                 <TouchableOpacity onPress={() => {modalVisible ? handleDismissModalPress() : handlePresentModalPress()}} className="w-full">
-                                    <SmallButton text={action === 'Download' && !useLocalFile ? 'Pause' : action === 'Pause' ? 'Resume' : action === 'Complete' ? 'Downloaded' : action === 'Downloading' ? 'Downloading' : useLocalFile ? 'Downloaded' : 'error'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon={action === 'Complete' || useLocalFile && action ==='Download' ? 'md-checkbox-outline' : useLocalFile ? 'md-checkbox-outline' :'download-outline' } />
+                                    <SmallButton text={ action === 'Pause' ? 'Paused' : action === 'Resume' || action === 'Downloading' ? 'Downloading' : action === 'Complete' ? 'Downloaded' : useLocalFile ? 'Downloaded' : 'error'} textColor='light-green' transparent={true} borderColor='light-green' color='light-green' icon={action === 'Complete' || useLocalFile && action ==='Download' ? 'md-checkbox-outline' : useLocalFile ? 'md-checkbox-outline' :'download-outline' } />
                                 </TouchableOpacity>                                          
                             </View>                                        
                         )}                                    
@@ -492,7 +500,7 @@ export default function SinglePost( {route, navigation} ) {
                         </>
                     ) : (
                         <>                            
-                            <View className="bg-nhs-white px-5">
+                            <View className={`bg-nhs-white ${device.osName === 'iPadOS' ? 'px-5' : ''}`}>
                                 <BottomTabView tabContent={postContent} />
                             </View>
                         </>
@@ -558,7 +566,7 @@ export default function SinglePost( {route, navigation} ) {
                                         <Text className="text-nhs-black text-md text-center">{post.title} is still downloading... Please wait or hide the process</Text>
                                     </View>
                                     <View className="w-full flex-row gap-2">
-                                    {options.Download.map((option, i) => (
+                                    {options.Resume.map((option, i) => (
                                         <TouchableOpacity onPress={() => {handleDownload(option, post)}} key={i} className={`w-1/2 px-4 py-2 rounded-full justify-center items-center ${option ==='Cancel' ? 'bg-nhs-red' : 'bg-nhs-light-green'}`}>
                                             <Text className="text-nhs-white font-bold tracking-wide text-lg">{option}</Text>
                                         </TouchableOpacity>))}
