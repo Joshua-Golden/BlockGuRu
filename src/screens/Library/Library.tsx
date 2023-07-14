@@ -122,6 +122,7 @@ export default function Library({ navigation }) {
     console.log(id, title)
     try {
       await removeSavedVideoByID('posts', id)
+      console.log('passed')
       const videoTitle = title.replaceAll(' ', '').toLowerCase()
       await removeSavedPost(videoTitle)
     } catch (error) {
